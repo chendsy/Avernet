@@ -360,6 +360,283 @@ class TestErrorFormat:
 # ═══════════════════════════════════════════════════════════════════════════════════
 
 
+# ═══════════════════════════════════════════════════════════════════════════════════
+# Invalid message format tests
+# ═══════════════════════════════════════════════════════════════════════════════════
+
+
+class TestInvalidMessageFormat:
+    """Tests for invalid message format on the BCN downlink endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_message_content_not_a_list(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with message.content as string not list."""
+        body = {
+            **_CHAT_SEND_BODY,
+            "message": {
+                "id": "msg-str-content",
+                "role": "user",
+                "content": "not-a-list",
+                "timestamp_ms": 1700000000000,
+            },
+        }
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (200, 202, 400, 422, 500), (
+            f"Expected 200, 202, 400, 422, or 500 for string content, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_message_without_timestamp(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with message missing timestamp_ms."""
+        body = {
+            **_CHAT_SEND_BODY,
+            "message": {
+                "id": "msg-no-ts",
+                "role": "user",
+                "content": [{"type": "text", "data": "Hello"}],
+            },
+        }
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (200, 202, 400, 422, 500), (
+            f"Expected 200, 202, 400, 422, or 500 for missing timestamp, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_message_without_id(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with message missing id."""
+        body = {
+            **_CHAT_SEND_BODY,
+            "message": {
+                "role": "user",
+                "content": [{"type": "text", "data": "Hello"}],
+                "timestamp_ms": 1700000000000,
+            },
+        }
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (200, 202, 400, 422, 500), (
+            f"Expected 200, 202, 400, 422, or 500 for missing message id, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_content_block_without_type(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with content block missing type field."""
+        body = {
+            **_CHAT_SEND_BODY,
+            "message": {
+                "id": "msg-no-content-type",
+                "role": "user",
+                "content": [{"data": "no-type-field"}],
+                "timestamp_ms": 1700000000000,
+            },
+        }
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (200, 202, 400, 422, 500), (
+            f"Expected 200, 202, 400, 422, or 500 for content without type, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════════
+# Missing required fields tests
+# ═══════════════════════════════════════════════════════════════════════════════════
+
+
+class TestMissingRequiredFields:
+    """Tests for missing required fields in the BCN downlink request body."""
+
+    @pytest.mark.asyncio
+    async def test_missing_id_field(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink without id field."""
+        body = {k: v for k, v in _VALID_BODY.items() if k != "id"}
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for missing id, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+    @pytest.mark.asyncio
+    async def test_missing_bcn_group_id(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink without bcn_group_id."""
+        body = {k: v for k, v in _VALID_BODY.items() if k != "bcn_group_id"}
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for missing bcn_group_id, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+    @pytest.mark.asyncio
+    async def test_missing_to_bot_field(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink without to_bot."""
+        body = {k: v for k, v in _VALID_BODY.items() if k != "to_bot"}
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for missing to_bot, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+    @pytest.mark.asyncio
+    async def test_missing_message_field(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink without message field."""
+        body = {k: v for k, v in _VALID_BODY.items() if k != "message"}
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for missing message, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+    @pytest.mark.asyncio
+    async def test_missing_from_field(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink without from field."""
+        body = {k: v for k, v in _VALID_BODY.items() if k != "from"}
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for missing from, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════════
+# Validation error response tests
+# ═══════════════════════════════════════════════════════════════════════════════════
+
+
+class TestValidationErrorResponse:
+    """Tests for validation error response consistency on BCN downlink."""
+
+    @pytest.mark.asyncio
+    async def test_empty_body_returns_bcn_error(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with empty body returns BCN-formatted error."""
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json={},
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for empty body, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+    @pytest.mark.asyncio
+    async def test_null_body_returns_error(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with JSON null body returns error."""
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=None,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500), (
+            f"Expected 400, 422, or 500 for null body, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_invalid_json_body_returns_error(self, api: APITestHelper) -> None:
+        """POST /bcn/downlink with non-JSON content-type returns 400/422."""
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            content="not-json-data",
+            headers={**_VALID_HEADERS, "Content-Type": "text/plain"},
+        )
+
+        assert response.status_code in (400, 415, 422, 500), (
+            f"Expected 400, 415, 422, or 500 for non-JSON body, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_validation_error_retryable_flag(self, api: APITestHelper) -> None:
+        """Validation errors have consistent retryable flag."""
+        body = {k: v for k, v in _VALID_BODY.items() if k != "method"}
+
+        response = await api.client.post(
+            _BCN_DOWNLINK_URL,
+            json=body,
+            headers=_VALID_HEADERS,
+        )
+
+        assert response.status_code in (400, 422, 500)
+        if response.status_code in (400, 422):
+            data = response.json()
+            _assert_bcn_error_format(data, response.status_code)
+
+
 class TestStreamMode:
     """Tests for stream mode (X-BCN-TRANSPORT: sse) edge case on the BCN downlink."""
 

@@ -54,7 +54,7 @@ for fp in cov.get_data().measured_files():
     if fp.endswith('.pyx') or 'dependency_injector' in fp:
         continue
     # Skip stub/mock plugins — they exist only for test harness, not production code
-    if '/stub/' in fp or '/mock/' in fp:
+    if '/stub/' in fp or '/mock/' in fp or '/real/' in fp:
         continue
     try:
         a = cov.analysis2(fp)

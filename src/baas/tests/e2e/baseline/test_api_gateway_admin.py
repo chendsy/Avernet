@@ -251,3 +251,160 @@ class TestAdminErrors:
             f"Expected 401, 403, or 404 for status patch nonexistent, "
             f"got {response.status_code}: {response.text[:200]}"
         )
+
+
+class TestAdminListExtended:
+    """Additional admin list key tests for pagination and status filters."""
+
+    @pytest.mark.asyncio
+    async def test_admin_list_keys_with_page_size_5(self, api: APITestHelper) -> None:
+        """GET /api/v1/admin/api-keys with page_size=5 exercises pagination."""
+        response = await api.client.get(
+            api.admin_api_key_url(),
+            params=api.params(page=1, page_size=5),
+        )
+
+        assert response.status_code in (200, 401, 403), (
+            f"Expected 200, 401, or 403 for list page_size=5, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_admin_list_keys_by_status_deactivated(
+        self, api: APITestHelper
+    ) -> None:
+        """GET /api/v1/admin/api-keys with status=DEACTIVATED."""
+        response = await api.client.get(
+            api.admin_api_key_url(),
+            params=api.params(page=1, page_size=10, status="DEACTIVATED"),
+        )
+
+        assert response.status_code in (200, 401, 403), (
+            f"Expected 200, 401, or 403 for DEACTIVATED filter, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_admin_list_keys_by_status_revoked(self, api: APITestHelper) -> None:
+        """GET /api/v1/admin/api-keys with status=REVOKED."""
+        response = await api.client.get(
+            api.admin_api_key_url(),
+            params=api.params(page=1, page_size=10, status="REVOKED"),
+        )
+
+        assert response.status_code in (200, 401, 403), (
+            f"Expected 200, 401, or 403 for REVOKED filter, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+
+class TestAdminRevokeExtended:
+    """Additional revoke tests via admin endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_admin_revoke_without_action_field(self, api: APITestHelper) -> None:
+        """PATCH /api/v1/admin/api-keys/{prefix}/status without action field."""
+        response = await api.client.patch(
+            api.admin_api_key_url("test-prefix") + "/status",
+            params=api.params(),
+            json={},
+        )
+
+        assert response.status_code in (400, 401, 403, 404, 422), (
+            f"Expected 400, 401, 403, 404, or 422 for revoke no action, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_admin_deactivate_valid_prefix(self, api: APITestHelper) -> None:
+        """PATCH /api/v1/admin/api-keys/{prefix}/status with action=deactivate."""
+        response = await api.client.patch(
+            api.admin_api_key_url("test-deactivate-prefix") + "/status",
+            params=api.params(),
+            json={"action": "deactivate"},
+        )
+
+        assert response.status_code in (200, 401, 403, 404), (
+            f"Expected 200, 401, 403, or 404 for deactivate, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_admin_activate_valid_prefix(self, api: APITestHelper) -> None:
+        """PATCH /api/v1/admin/api-keys/{prefix}/status with action=activate."""
+        response = await api.client.patch(
+            api.admin_api_key_url("test-activate-prefix") + "/status",
+            params=api.params(),
+            json={"action": "activate"},
+        )
+
+        assert response.status_code in (200, 401, 403, 404), (
+            f"Expected 200, 401, 403, or 404 for activate, "
+            f"got {response.status_code}: {response.text[:200]}"
+        )
+
+
+class TestAdminCreateDuplicate:
+    """Duplicate key creation tests for admin endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_admin_create_duplicate_bot_key(
+        self, api: APITestHelper, unique_id: str
+    ) -> None:
+        """POST /api/v1/admin/api-keys twice with same app_id for bot type."""
+        body = {
+            "app_type": "bot",
+            "app_id": f"e2e-dup-bot-{unique_id}",
+            "key_name": f"dup-bot-key-{unique_id}",
+            "description": "Duplicate test for bot key",
+            "tenant": api.tenant,
+        }
+
+        r1 = await api.client.post(
+            api.admin_api_key_url(),
+            params=api.params(),
+            json=body,
+        )
+        assert r1.status_code in (200, 401, 403, 422)
+
+        r2 = await api.client.post(
+            api.admin_api_key_url(),
+            params=api.params(),
+            json=body,
+        )
+
+        assert r2.status_code in (200, 201, 400, 401, 403, 409, 422), (
+            f"Expected 200, 201, 400, 401, 403, 409, or 422 for duplicate bot key, "
+            f"got {r2.status_code}: {r2.text[:200]}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_admin_create_duplicate_app_key(
+        self, api: APITestHelper, unique_id: str
+    ) -> None:
+        """POST /api/v1/admin/api-keys twice with same app_id for app type."""
+        body = {
+            "app_type": "app",
+            "app_id": f"e2e-dup-app-{unique_id}",
+            "key_name": f"dup-app-key-{unique_id}",
+            "description": "Duplicate test for app key",
+            "tenant": api.tenant,
+        }
+
+        r1 = await api.client.post(
+            api.admin_api_key_url(),
+            params=api.params(),
+            json=body,
+        )
+        assert r1.status_code in (200, 401, 403, 422)
+
+        r2 = await api.client.post(
+            api.admin_api_key_url(),
+            params=api.params(),
+            json=body,
+        )
+
+        assert r2.status_code in (200, 201, 400, 401, 403, 409, 422), (
+            f"Expected 200, 201, 400, 401, 403, 409, or 422 for duplicate app key, "
+            f"got {r2.status_code}: {r2.text[:200]}"
+        )

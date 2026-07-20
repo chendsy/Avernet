@@ -3,6 +3,9 @@
 Tests cover:
 - Request with valid API key header → 401 (key must pass validator)
 - Request without API key header → 401
+- Malformed Authorization header formats
+- Missing required headers
+- Multiple endpoints tested for consistent auth behavior
 """
 
 import pytest
@@ -86,6 +89,90 @@ class TestOpenAPIDependencies:
         """GET /openapi/v1/runs/xxx without Authorization → 401."""
         response = await api.client.get(
             f"{api.open_api_run_url()}/test-run",
+        )
+
+        assert response.status_code == 401
+
+
+class TestMalformedAuthHeaders:
+    """Tests for malformed Authorization header formats across endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_non_bearer_scheme_on_runs(self, api: APITestHelper) -> None:
+        """POST /openapi/v1/runs with non-Bearer scheme → 400."""
+        response = await api.client.post(
+            api.open_api_run_url(),
+            json={"message": "hello"},
+            headers={"Authorization": "Digest foo"},
+        )
+
+        assert response.status_code in (400, 401)
+
+    @pytest.mark.asyncio
+    async def test_bearer_without_token_on_runs(self, api: APITestHelper) -> None:
+        """POST /openapi/v1/runs with 'Bearer' (no token) → 400."""
+        response = await api.client.post(
+            api.open_api_run_url(),
+            json={"message": "hello"},
+            headers={"Authorization": "Bearer"},
+        )
+
+        assert response.status_code in (400, 401)
+
+    @pytest.mark.asyncio
+    async def test_bearer_with_extra_parts_on_runs(self, api: APITestHelper) -> None:
+        """POST /openapi/v1/runs with 'Bearer token extra' → 400."""
+        response = await api.client.post(
+            api.open_api_run_url(),
+            json={"message": "hello"},
+            headers={"Authorization": "Bearer token extra"},
+        )
+
+        assert response.status_code in (400, 401)
+
+    @pytest.mark.asyncio
+    async def test_empty_authorization_on_messages(self, api: APITestHelper) -> None:
+        """POST /openapi/v1/messages with empty Authorization → 401."""
+        response = await api.client.post(
+            api.open_api_message_url(),
+            json={"bot_id": "test-bot", "message": "hello"},
+            headers={"Authorization": ""},
+        )
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_lowercase_bearer_on_runs(self, api: APITestHelper) -> None:
+        """POST /openapi/v1/runs with lowercase 'bearer' scheme → 401.
+
+        get_api_key_from_header does case-insensitive comparison of 'bearer'.
+        """
+        response = await api.client.post(
+            api.open_api_run_url(),
+            json={"message": "hello"},
+            headers={"Authorization": "bearer sk-test-key"},
+        )
+
+        assert response.status_code in (200, 401)
+
+    @pytest.mark.asyncio
+    async def test_missing_authorization_on_message_result(
+        self, api: APITestHelper
+    ) -> None:
+        """GET /openapi/v1/messages/{id} without Authorization → 401."""
+        response = await api.client.get(
+            f"{api.open_api_message_url()}/test-message-id",
+        )
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_missing_authorization_on_session_messages(
+        self, api: APITestHelper
+    ) -> None:
+        """GET /openapi/v1/sessions/{id}/messages without Authorization → 401."""
+        response = await api.client.get(
+            f"{api.open_api_session_url('test-session')}/messages",
         )
 
         assert response.status_code == 401

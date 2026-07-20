@@ -25,7 +25,7 @@ from secbaas.community.plugins.bot.engine_adapter.claude_code.stub import (
 )
 from secbaas.community.plugins.bot.engine_adapter.hermes.stub import NoopHermesAdapter
 
-pytestmark = [pytest.mark.e2e]
+pytestmark = [pytest.mark.e2e, pytest.mark.baseline]
 
 
 class TestStubAdapterBoot:
