@@ -244,6 +244,23 @@ run_e2e_mock_failure_device_not_found() {
 
 
 
+run_e2e_paas_operations() {
+    local mode="${1:-${_BAAS_MODE:-bare}}"
+    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
+    log_sub "E2E PaaS operations tests"
+    mkdir -p "$REPORT_DIR"
+    export _BAAS_MODE="$mode"
+    export SESSION_LABEL="paas-operations"
+    _start_app "$overlay"
+    _run_pytest uv run pytest tests/e2e/paas_operations/ -v --durations=0 \
+        --log-cli-level=INFO --tb=short \
+        -m "paas_operations" \
+        --junitxml="$REPORT_DIR/e2e-paas-operations.xml" --color=yes
+    local rc=$?
+    _stop_app
+    return $rc
+}
+
 run_e2e_tests() {
     local mode="${1:-${_BAAS_MODE:-bare}}"
     local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
@@ -259,6 +276,7 @@ run_e2e_tests() {
     run_e2e_mock_failure_create "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_mock_failure_destroy "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_mock_failure_device_not_found "$mode" "$overlay" || ec=$((ec + $?))
+    run_e2e_paas_operations "$mode" "$overlay" || ec=$((ec + $?))
 
     _merge_e2e_coverage
 

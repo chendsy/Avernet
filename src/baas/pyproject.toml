@@ -128,6 +128,7 @@ markers = [
   "mock_paas_create_failure: marks e2e tests for mock device creation failure",
   "mock_paas_destroy_failure: marks e2e tests for mock device destroy failure",
   "mock_paas_device_not_found: marks e2e tests for mock device not found (idempotent destroy)",
+  "paas_operations: marks e2e tests for PaaS service layer operations",
 ]
 
 # --- 构建后端定义 ---
