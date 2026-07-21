@@ -13,8 +13,8 @@ and only interact with the system via HTTP endpoints — no internal imports.
 import pytest
 
 from ..conftest import (
-    APITestHelper,
     DEFAULT_TEMPLATE_UUID,
+    APITestHelper,
     cleanup_bot,
     create_test_bot,
 )
@@ -284,9 +284,7 @@ class TestCallbackServerNonProd:
     """Callback server URL resolution in non-production environments."""
 
     @pytest.mark.asyncio
-    async def test_callback_server_non_prod(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_callback_server_non_prod(self, api: APITestHelper) -> None:
         """Verify callback-server health endpoints work in non-prod env.
 
         The _start_hook_dispatcher uses _get_callback_server() which reads

@@ -21,7 +21,6 @@ import pytest
 tlog = logging.getLogger("e2e.facade_config")
 
 from ..conftest import (
-    APITestHelper,
     TEMPLATE_ARCA,
     TEMPLATE_DOCKER,
     TEMPLATE_K8S,
@@ -29,6 +28,7 @@ from ..conftest import (
     TEMPLATE_POOLAB,
     TEMPLATE_SIGMA,
     TEMPLATE_TECLAW,
+    APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
@@ -491,14 +491,25 @@ class TestFacadeConfigAllPlatforms:
         # ARCA is the only fully wired provider.
         succeeded_count = sum(1 for v in results.values() if v is True)
         if succeeded_count == 0:
-            failures = {k: v for k, v in results.items() if v is False and not k.endswith("_error")}
+            failures = {
+                k: v
+                for k, v in results.items()
+                if v is False and not k.endswith("_error")
+            }
             error_details = {k: results.get(f"{k}_error", "unknown") for k in failures}
             pytest.fail(f"All platforms failed: {failures}\nErrors: {error_details}")
         elif succeeded_count < len(platforms):
-            failures = {k: v for k, v in results.items() if v is False and not k.endswith("_error")}
+            failures = {
+                k: v
+                for k, v in results.items()
+                if v is False and not k.endswith("_error")
+            }
             tlog.info(
                 "%d/%d platforms succeeded; %d failed (expected in stub mode): %s",
-                succeeded_count, len(platforms), len(failures), list(failures.keys()),
+                succeeded_count,
+                len(platforms),
+                len(failures),
+                list(failures.keys()),
             )
 
         assert len([v for v in results.values() if v is True]) > 0, (

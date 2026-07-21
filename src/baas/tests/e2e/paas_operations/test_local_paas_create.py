@@ -12,8 +12,8 @@ Endpoints under test:
 import pytest
 
 from ..conftest import (
-    APITestHelper,
     TEMPLATE_LOCAL,
+    APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
@@ -38,9 +38,7 @@ class TestLocalPaasCreate:
     async def test_create_local_device_success(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_LOCAL
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_LOCAL)
         paas_id = _expect_device_id(device)
         try:
             assert device.get("platform", "").upper() in ("LOCAL", ""), (
@@ -123,9 +121,7 @@ class TestLocalPaasInfo:
     async def test_get_device_info_after_create(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_LOCAL
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_LOCAL)
         paas_id = _expect_device_id(device)
         try:
             response = await api.client.get(

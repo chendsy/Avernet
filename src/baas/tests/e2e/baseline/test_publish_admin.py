@@ -55,8 +55,7 @@ class TestAdminForceSuccess:
             json={},
         )
         assert resp.status_code == 422, (
-            f"Expected 422 for empty body, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 422 for empty body, got {resp.status_code}: {resp.text[:200]}"
         )
 
 
@@ -145,9 +144,7 @@ class TestAdminPublishListQueries:
             await cleanup_bot(api, bot["bot_uuid"])
 
     @pytest.mark.asyncio
-    async def test_post_publish_missing_body(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_post_publish_missing_body(self, api: APITestHelper) -> None:
         """POST /api/v1/publishes with empty body returns 422."""
         resp = await api.client.post(
             api.publish_url(),
@@ -155,8 +152,7 @@ class TestAdminPublishListQueries:
             json={},
         )
         assert resp.status_code == 422, (
-            f"Expected 422 for empty body, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 422 for empty body, got {resp.status_code}: {resp.text[:200]}"
         )
 
     @pytest.mark.asyncio
@@ -182,9 +178,7 @@ class TestAdminPublishListQueries:
         assert "publish_type" in pub, f"Missing publish_type in {list(pub.keys())}"
         assert "status" in pub, f"Missing status in {list(pub.keys())}"
 
-        print(
-            f"[TIMING] test_get_single_publish: {time.monotonic() - t0:.2f}s"
-        )
+        print(f"[TIMING] test_get_single_publish: {time.monotonic() - t0:.2f}s")
         await cleanup_bot(api, bot["bot_uuid"])
 
 
@@ -240,8 +234,7 @@ class TestAdminForceSuccessWithRealPublish:
             json={"publish_id": publish_id, "modifier": "e2e-test"},
         )
         assert resp.status_code == 200, (
-            f"Expected 200 for force-success, "
-            f"got {resp.status_code}: {resp.text[:200]}"
+            f"Expected 200 for force-success, got {resp.status_code}: {resp.text[:200]}"
         )
         result = resp.json()["data"]
         assert result["publish_id"] == publish_id
@@ -263,7 +256,6 @@ class TestAdminForceSuccessWithRealPublish:
         )
 
         print(
-            f"[TIMING] test_force_success_on_real_publish: "
-            f"{time.monotonic() - t0:.2f}s"
+            f"[TIMING] test_force_success_on_real_publish: {time.monotonic() - t0:.2f}s"
         )
         await cleanup_bot(api, bot["bot_uuid"])

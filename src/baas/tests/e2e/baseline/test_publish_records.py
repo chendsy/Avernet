@@ -53,13 +53,9 @@ class TestPublishRecordQueries:
             await cleanup_bot(api, bot["bot_uuid"])
 
     @pytest.mark.asyncio
-    async def test_get_publish_detail(
-        self, api: APITestHelper, unique_id: str
-    ) -> None:
+    async def test_get_publish_detail(self, api: APITestHelper, unique_id: str) -> None:
         """GET /api/v1/publishes/{id} returns full publish record detail."""
-        bot = await create_test_bot(
-            api, f"rec-detail-{unique_id}", device_count=1
-        )
+        bot = await create_test_bot(api, f"rec-detail-{unique_id}", device_count=1)
         publish_id = bot["publish_id"]
 
         response = await api.client.get(
@@ -92,9 +88,7 @@ class TestPublishRecordQueries:
         self, api: APITestHelper, unique_id: str
     ) -> None:
         """GET /api/v1/publishes/{id}/progress returns progress data structure."""
-        bot = await create_test_bot(
-            api, f"rec-progress-{unique_id}", device_count=1
-        )
+        bot = await create_test_bot(api, f"rec-progress-{unique_id}", device_count=1)
         publish_id = bot["publish_id"]
 
         response = await api.client.get(
@@ -173,9 +167,7 @@ class TestPublishRecordFilters:
             await cleanup_bot(api, bot["bot_uuid"])
 
     @pytest.mark.asyncio
-    async def test_get_publish_not_found(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_get_publish_not_found(self, api: APITestHelper) -> None:
         """GET /api/v1/publishes/99999999 returns 404 for nonexistent publish."""
         response = await api.client.get(
             api.publish_url(99999999),
@@ -200,9 +192,7 @@ class TestPublishProgressDetails:
         self, api: APITestHelper, unique_id: str
     ) -> None:
         """GET /publishes/{id}/progress?include_devices=true returns device details."""
-        bot = await create_test_bot(
-            api, f"rec-progdev-{unique_id}", device_count=1
-        )
+        bot = await create_test_bot(api, f"rec-progdev-{unique_id}", device_count=1)
         publish_id = bot["publish_id"]
 
         response = await api.client.get(
@@ -230,9 +220,7 @@ class TestPublishProgressDetails:
         await cleanup_bot(api, bot["bot_uuid"])
 
     @pytest.mark.asyncio
-    async def test_progress_for_nonexistent_publish(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_progress_for_nonexistent_publish(self, api: APITestHelper) -> None:
         """GET /publishes/99999999/progress returns 404."""
         response = await api.client.get(
             api.publish_url(99999999, "progress"),
@@ -261,9 +249,7 @@ class TestPublishRecordStatusTransitions:
         With auto_approve_publish=True (default in create_test_bot), the
         publish should reach SUCCESS or ACTIVE synchronously.
         """
-        bot = await create_test_bot(
-            api, f"rec-status-{unique_id}", device_count=1
-        )
+        bot = await create_test_bot(api, f"rec-status-{unique_id}", device_count=1)
         publish_id = bot["publish_id"]
 
         response = await api.client.get(
@@ -290,12 +276,8 @@ class TestPublishRecordStatusTransitions:
         self, api: APITestHelper, unique_id: str
     ) -> None:
         """Two bots produce distinct publish_ids, and both are accessible."""
-        bot1 = await create_test_bot(
-            api, f"rec-multi-a-{unique_id}", device_count=1
-        )
-        bot2 = await create_test_bot(
-            api, f"rec-multi-b-{unique_id}", device_count=1
-        )
+        bot1 = await create_test_bot(api, f"rec-multi-a-{unique_id}", device_count=1)
+        bot2 = await create_test_bot(api, f"rec-multi-b-{unique_id}", device_count=1)
 
         assert bot1["publish_id"] != bot2["publish_id"], (
             f"Expected different publish IDs, got {bot1['publish_id']} and {bot2['publish_id']}"

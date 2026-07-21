@@ -20,8 +20,8 @@ _device_service.py is wired via the facade internally.
 import pytest
 
 from ..conftest import (
-    APITestHelper,
     TEMPLATE_ARCA,
+    APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
@@ -112,9 +112,8 @@ class TestDeviceServiceErrors:
                 assert response.status_code == 200
                 data = response.json()
                 if "data" in data and data["data"]:
-                    device_id = (
-                        data["data"].get("sandbox_id")
-                        or data["data"].get("container_id")
+                    device_id = data["data"].get("sandbox_id") or data["data"].get(
+                        "container_id"
                     )
                     if device_id:
                         created_ids.append(str(device_id))

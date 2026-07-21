@@ -1,7 +1,6 @@
 import pytest
 
 from ..conftest import (
-    APITestHelper,
     TEMPLATE_ARCA,
     TEMPLATE_DOCKER,
     TEMPLATE_K8S,
@@ -9,6 +8,7 @@ from ..conftest import (
     TEMPLATE_POOLAB,
     TEMPLATE_SIGMA,
     TEMPLATE_TECLAW,
+    APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
@@ -39,9 +39,7 @@ class TestFacadeDispatchArca:
     async def test_dispatch_to_arca_creates_device_with_platform(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_ARCA
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_ARCA)
         try:
             assert device.get("platform", "").upper() == "ARCA"
             _assert_response_shape(device)
@@ -57,9 +55,7 @@ class TestFacadeDispatchSigma:
     async def test_dispatch_to_sigma_creates_device_with_platform(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_SIGMA
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_SIGMA)
         try:
             assert device.get("platform", "").upper() == "SIGMA"
             _assert_response_shape(device)
@@ -73,9 +69,7 @@ class TestFacadeDispatchLocal:
     async def test_dispatch_to_local_creates_device(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_LOCAL
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_LOCAL)
         try:
             _assert_response_shape(device)
         finally:
@@ -91,9 +85,7 @@ class TestFacadeDispatchPoolab:
     async def test_dispatch_to_poolab_returns_error(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_POOLAB
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_POOLAB)
         try:
             _assert_response_shape(device)
         finally:
@@ -112,9 +104,7 @@ class TestFacadeDispatchTeclaw:
     async def test_dispatch_to_teclaw_returns_error(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_TECLAW
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_TECLAW)
         try:
             _assert_response_shape(device)
         finally:
@@ -133,9 +123,7 @@ class TestFacadeDispatchK8s:
     async def test_dispatch_to_k8s_returns_error(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_K8S
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_K8S)
         try:
             _assert_response_shape(device)
         finally:
@@ -154,9 +142,7 @@ class TestFacadeDispatchDocker:
     async def test_dispatch_to_docker_returns_error(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_DOCKER
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_DOCKER)
         try:
             _assert_response_shape(device)
         finally:
@@ -208,14 +194,10 @@ class TestFactoryPlatformSelection:
     async def test_arca_template_returns_platform_arca(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_ARCA
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_ARCA)
         try:
             platform = device.get("platform", "")
-            assert platform.upper() == "ARCA", (
-                f"Expected ARCA, got {platform}"
-            )
+            assert platform.upper() == "ARCA", f"Expected ARCA, got {platform}"
         finally:
             await destroy_paas_device(api, _get_device_id(device))
 
@@ -226,13 +208,9 @@ class TestFactoryPlatformSelection:
     async def test_sigma_template_returns_platform_sigma(
         self, api: APITestHelper, unique_id: str
     ) -> None:
-        device = await create_paas_device(
-            api, unique_id, template_uuid=TEMPLATE_SIGMA
-        )
+        device = await create_paas_device(api, unique_id, template_uuid=TEMPLATE_SIGMA)
         try:
             platform = device.get("platform", "")
-            assert platform.upper() == "SIGMA", (
-                f"Expected SIGMA, got {platform}"
-            )
+            assert platform.upper() == "SIGMA", f"Expected SIGMA, got {platform}"
         finally:
             await destroy_paas_device(api, _get_device_id(device))

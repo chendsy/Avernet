@@ -152,9 +152,7 @@ class TestManualApproveFlow:
         (mock mode fast path). The approve call should be accepted (200) or
         rejected as already-terminal (400). Verifies the publish exists via GET.
         """
-        bot = await create_test_bot(
-            api, f"manual-{unique_id}", device_count=1
-        )
+        bot = await create_test_bot(api, f"manual-{unique_id}", device_count=1)
         publish_id = bot["publish_id"]
         assert publish_id, "Bot should have a publish_id"
 
@@ -180,9 +178,7 @@ class TestManualApproveFlow:
         await cleanup_bot(api, bot["bot_uuid"])
 
     @pytest.mark.asyncio
-    async def test_approve_with_invalid_publish_id(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_approve_with_invalid_publish_id(self, api: APITestHelper) -> None:
         """Approve a non-existent publish ID → 404."""
         resp = await api.client.post(
             api.publish_url(99999999, "approve"),
@@ -198,9 +194,7 @@ class TestDenyFlow:
     """Reject and revoke flows — including non-existent publish edge cases."""
 
     @pytest.mark.asyncio
-    async def test_reject_publish_not_found(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_reject_publish_not_found(self, api: APITestHelper) -> None:
         """Reject a non-existent publish ID → 422 (validation fails before lookup)."""
         resp = await api.client.post(
             api.publish_url(99999999, "reject"),
@@ -212,9 +206,7 @@ class TestDenyFlow:
         )
 
     @pytest.mark.asyncio
-    async def test_revoke_publish_not_found(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_revoke_publish_not_found(self, api: APITestHelper) -> None:
         """Revoke a non-existent publish ID → 422 (validation fails before lookup)."""
         resp = await api.client.post(
             api.publish_url(99999999, "revoke"),
@@ -230,9 +222,7 @@ class TestApproveIdempotency:
     """Approve edge cases — missing fields, already-completed publishes."""
 
     @pytest.mark.asyncio
-    async def test_approve_missing_fields(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_approve_missing_fields(self, api: APITestHelper) -> None:
         """Approve with empty body → 422 or 400 (validation error)."""
         resp = await api.client.post(
             api.publish_url(1, "approve"),

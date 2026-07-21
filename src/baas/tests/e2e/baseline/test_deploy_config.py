@@ -159,7 +159,11 @@ class TestDeployConfigValidation:
         )
 
         data = response.json()
-        bot_uuid = data.get("data", {}).get("bot_uuid") if response.status_code == 200 else None
+        bot_uuid = (
+            data.get("data", {}).get("bot_uuid")
+            if response.status_code == 200
+            else None
+        )
         if bot_uuid:
             tlog.info("Mount point permission strings accepted and converted")
             await cleanup_bot(api, bot_uuid)
@@ -261,7 +265,11 @@ class TestDeployConfigValidation:
         )
 
         data = response.json()
-        bot_uuid = data.get("data", {}).get("bot_uuid") if response.status_code == 200 else None
+        bot_uuid = (
+            data.get("data", {}).get("bot_uuid")
+            if response.status_code == 200
+            else None
+        )
         if bot_uuid:
             # Read back the bot to inspect stored config
             detail_resp = await api.client.get(
@@ -275,7 +283,10 @@ class TestDeployConfigValidation:
                     # DeployConfig defaults: after_create_hook_wait_seconds=300
                     dc = config.get("deploy_config")
                     if dc is not None:
-                        assert dc.get("after_create_hook_wait_seconds") in (None, 300), (
+                        assert dc.get("after_create_hook_wait_seconds") in (
+                            None,
+                            300,
+                        ), (
                             f"Expected default 300 for after_create_hook_wait_seconds, "
                             f"got {dc.get('after_create_hook_wait_seconds')}"
                         )
@@ -335,14 +346,19 @@ class TestDeployConfigRoundtrip:
             )
 
             items = detail_resp.json().get("data", {}).get("items", [])
-            assert len(items) >= 1, "Expected at least one bot item in detail-by-uuid response"
+            assert len(items) >= 1, (
+                "Expected at least one bot item in detail-by-uuid response"
+            )
 
             stored_config = items[0].get("config") or {}
             stored_dc = stored_config.get("deploy_config")
 
             # DeployConfig may be None if the platform doesn't store it inline
             if stored_dc is not None:
-                assert stored_dc.get("after_create_cmd_hook") == submitted_dc["after_create_cmd_hook"], (
+                assert (
+                    stored_dc.get("after_create_cmd_hook")
+                    == submitted_dc["after_create_cmd_hook"]
+                ), (
                     f"after_create_cmd_hook mismatch: "
                     f"submitted={submitted_dc['after_create_cmd_hook']!r}, "
                     f"got={stored_dc.get('after_create_cmd_hook')!r}"

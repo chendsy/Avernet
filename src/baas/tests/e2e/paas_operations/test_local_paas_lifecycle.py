@@ -49,7 +49,9 @@ def _assert_not_di_error(response: Any) -> None:
 
 
 class TestLocalPaasRestart:
-    @pytest.mark.xfail(reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)")
+    @pytest.mark.xfail(
+        reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)"
+    )
     @pytest.mark.asyncio
     async def test_restart_local_device_returns_200(
         self, api: APITestHelper, unique_id: str
@@ -70,7 +72,9 @@ class TestLocalPaasRestart:
 
 
 class TestLocalPaasDestroy:
-    @pytest.mark.xfail(reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)")
+    @pytest.mark.xfail(
+        reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)"
+    )
     @pytest.mark.asyncio
     async def test_destroy_local_device_returns_200(
         self, api: APITestHelper, unique_id: str
@@ -83,7 +87,9 @@ class TestLocalPaasDestroy:
             f"Destroy returned {resp.status_code}: {resp.text}"
         )
 
-    @pytest.mark.xfail(reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)")
+    @pytest.mark.xfail(
+        reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)"
+    )
     @pytest.mark.asyncio
     async def test_destroyed_device_not_found_returns_404(
         self, api: APITestHelper, unique_id: str
@@ -100,7 +106,9 @@ class TestLocalPaasDestroy:
             f"Destroyed device info returned {resp.status_code}: {resp.text}"
         )
 
-    @pytest.mark.xfail(reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)")
+    @pytest.mark.xfail(
+        reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)"
+    )
     @pytest.mark.asyncio
     async def test_idempotent_destroy_handled_gracefully(
         self, api: APITestHelper, unique_id: str
@@ -118,7 +126,9 @@ class TestLocalPaasDestroy:
 
 
 class TestLocalPaasUpdate:
-    @pytest.mark.xfail(reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)")
+    @pytest.mark.xfail(
+        reason="LOCAL stub requires registered machine (user_id/machine_id/tc_bot_id/agent_code)"
+    )
     @pytest.mark.asyncio
     async def test_update_ttl_local_device_returns_200(
         self, api: APITestHelper, unique_id: str

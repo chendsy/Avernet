@@ -53,9 +53,7 @@ class TestPublishNoEligibleDevices:
         publish against it. Since the bot has no ACTIVE devices to
         reference, the server should reject with 400 or 422.
         """
-        bot = await create_test_bot(
-            api, f"no-active-{unique_id}", device_count=1
-        )
+        bot = await create_test_bot(api, f"no-active-{unique_id}", device_count=1)
 
         response = await api.client.post(
             api.publish_url(),

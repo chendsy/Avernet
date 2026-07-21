@@ -13,7 +13,12 @@ from typing import Any
 
 import pytest
 
-from ..conftest import TEMPLATE_DOCKER, APITestHelper, create_paas_device, destroy_paas_device
+from ..conftest import (
+    TEMPLATE_DOCKER,
+    APITestHelper,
+    create_paas_device,
+    destroy_paas_device,
+)
 
 _NON_ARCA_XFAIL = pytest.mark.xfail(
     reason="CreateDeviceRequest.detail_config only accepts "
@@ -49,9 +54,7 @@ class TestDockerCreateDevice:
             assert device.get("platform") == "DOCKER", (
                 f"Expected platform=DOCKER, got {device.get('platform')}"
             )
-            assert device.get("status"), (
-                f"Missing status in {list(device.keys())}"
-            )
+            assert device.get("status"), f"Missing status in {list(device.keys())}"
         finally:
             device_id = device.get("sandbox_id") or device.get("container_id")
             if device_id:
@@ -71,9 +74,7 @@ class TestDockerCreateDevice:
         )
         try:
             device_id = device.get("sandbox_id") or device.get("container_id")
-            assert device_id, (
-                f"Missing device ID in {list(device.keys())}"
-            )
+            assert device_id, f"Missing device ID in {list(device.keys())}"
             assert device.get("platform") == "DOCKER", (
                 f"Expected platform=DOCKER, got {device.get('platform')}"
             )
@@ -176,7 +177,9 @@ class TestDockerExecuteCommand:
             )
             if response.status_code == 200:
                 data = response.json()
-                assert isinstance(data, dict), f"Docker command response is not dict: {data}"
+                assert isinstance(data, dict), (
+                    f"Docker command response is not dict: {data}"
+                )
         finally:
             if device_id:
                 await destroy_paas_device(api, str(device_id))

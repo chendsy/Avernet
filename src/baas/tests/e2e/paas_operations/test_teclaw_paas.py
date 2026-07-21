@@ -12,7 +12,12 @@ from typing import Any
 
 import pytest
 
-from ..conftest import TEMPLATE_TECLAW, APITestHelper, create_paas_device, destroy_paas_device
+from ..conftest import (
+    TEMPLATE_TECLAW,
+    APITestHelper,
+    create_paas_device,
+    destroy_paas_device,
+)
 
 _NON_ARCA_XFAIL = pytest.mark.xfail(
     reason="CreateDeviceRequest.detail_config only accepts "
@@ -38,9 +43,7 @@ class TestTeClawCreateDevice:
             assert device.get("platform") == "TECLAW", (
                 f"Expected platform=TECLAW, got {device.get('platform')}"
             )
-            assert device.get("status"), (
-                f"Missing status in {list(device.keys())}"
-            )
+            assert device.get("status"), f"Missing status in {list(device.keys())}"
         finally:
             device_id = device.get("teclaw_bot_id")
             if device_id:

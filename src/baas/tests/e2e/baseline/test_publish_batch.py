@@ -205,9 +205,7 @@ class TestBatchPublishQueries:
             await cleanup_bot(api, bot["bot_uuid"])
 
     @pytest.mark.asyncio
-    async def test_create_publish_missing_operator(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_create_publish_missing_operator(self, api: APITestHelper) -> None:
         """POST /api/v1/publishes with missing operator returns 422."""
         response = await api.client.post(
             api.publish_url(),
@@ -225,9 +223,7 @@ class TestBatchPublishQueries:
         )
 
     @pytest.mark.asyncio
-    async def test_get_publish_by_id(
-        self, api: APITestHelper, unique_id: str
-    ) -> None:
+    async def test_get_publish_by_id(self, api: APITestHelper, unique_id: str) -> None:
         """GET /api/v1/publishes/{id} returns the matching publish record."""
         bot = await create_test_bot(
             api,

@@ -5,8 +5,8 @@ import uuid
 import pytest
 
 from ..conftest import (
-    APITestHelper,
     TEMPLATE_LOCAL,
+    APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
@@ -16,9 +16,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.paas_operations]
 
 class TestLocalPaasErrors:
     @pytest.mark.asyncio
-    async def test_create_with_invalid_detail_config(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_create_with_invalid_detail_config(self, api: APITestHelper) -> None:
         response = await api.client.post(
             api.paas_device_url(),
             params=api.params(),
@@ -33,9 +31,7 @@ class TestLocalPaasErrors:
         assert "error" in body or "detail" in body or "message" in body
 
     @pytest.mark.asyncio
-    async def test_create_when_stub_reports_failure(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_create_when_stub_reports_failure(self, api: APITestHelper) -> None:
         response = await api.client.post(
             api.paas_device_url(),
             params=api.params(),
@@ -50,9 +46,7 @@ class TestLocalPaasErrors:
         assert "error" in body or "detail" in body or "message" in body
 
     @pytest.mark.asyncio
-    async def test_destroy_nonexistent_device(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_destroy_nonexistent_device(self, api: APITestHelper) -> None:
         fake_id = f"nonexistent-{uuid.uuid4().hex[:8]}"
         response = await api.client.delete(
             api.paas_device_url(fake_id),
@@ -78,9 +72,7 @@ class TestLocalPaasErrors:
             await destroy_paas_device(api, device.get("device_id"))
 
     @pytest.mark.asyncio
-    async def test_command_on_nonexistent_device(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_command_on_nonexistent_device(self, api: APITestHelper) -> None:
         fake_id = f"nonexistent-{uuid.uuid4().hex[:8]}"
         response = await api.client.post(
             api.paas_device_url(fake_id, "command"),
@@ -90,9 +82,7 @@ class TestLocalPaasErrors:
         assert response.status_code >= 400
 
     @pytest.mark.asyncio
-    async def test_create_with_empty_tenant_name(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_create_with_empty_tenant_name(self, api: APITestHelper) -> None:
         response = await api.client.post(
             api.paas_device_url(),
             params=api.params(),
@@ -105,9 +95,7 @@ class TestLocalPaasErrors:
         assert response.status_code >= 400
 
     @pytest.mark.asyncio
-    async def test_create_with_missing_tenant_name(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_create_with_missing_tenant_name(self, api: APITestHelper) -> None:
         response = await api.client.post(
             api.paas_device_url(),
             params=api.params(),
@@ -119,9 +107,7 @@ class TestLocalPaasErrors:
         assert response.status_code >= 400
 
     @pytest.mark.asyncio
-    async def test_get_info_nonexistent_device(
-        self, api: APITestHelper
-    ) -> None:
+    async def test_get_info_nonexistent_device(self, api: APITestHelper) -> None:
         fake_id = f"nonexistent-{uuid.uuid4().hex[:8]}"
         response = await api.client.get(
             api.paas_device_url(fake_id, "info"),
