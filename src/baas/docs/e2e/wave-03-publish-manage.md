@@ -8,7 +8,7 @@
 
 ## Phase 2.1: Publish Approval/Denial Flows
 
-**Goal**: Exercise publish approval logic in `_publish_service.py` (74.5% → 80%+)
+**Goal**: Exercise publish approval logic in `_publish_service.py` (74.5% → 90%+)
 
 **Files to create/modify**:
 - `tests/e2e/baseline/test_publish_approval.py` (new)
@@ -44,7 +44,7 @@
 
 **Verification**:
 1. `just test-e2e-full`
-2. Check: `_publish_service.py` ≥ 83%
+2. Check: `_publish_service.py` ≥ 90%
 3. Check: no test failures
 
 ---
