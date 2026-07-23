@@ -6,14 +6,14 @@ message retrieval, and error handling through Open API and management endpoints.
 
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     APITestHelper,
     cleanup_bot,
     create_test_bot,
     find_existing_bot,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.bot_run_lifecycle]
+pytestmark = [pytest.mark.bot_run_lifecycle]
 
 
 def _get_bot_uuid(bot: dict) -> str:

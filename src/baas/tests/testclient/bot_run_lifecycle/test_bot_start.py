@@ -4,9 +4,11 @@ Covers Phase 4.1 of Wave 05: exercise start/create paths for BaasBotService
 and ClawBotService through the management and Open API endpoints.
 """
 
+import uuid
+
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     TEMPLATE_ARCA,
     TEMPLATE_TECLAW,
     APITestHelper,
@@ -15,7 +17,7 @@ from ..conftest import (
     find_existing_bot,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.bot_run_lifecycle]
+pytestmark = [pytest.mark.bot_run_lifecycle]
 
 
 def _get_bot_uuid(bot: dict) -> str:
@@ -184,7 +186,7 @@ class TestBotStopRestart:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"stop-{unique_id}",
+                    "request_id": uuid.uuid4().hex,
                 },
             )
             assert response.status_code in (200, 400, 404, 500), (
@@ -200,7 +202,7 @@ class TestBotStopRestart:
             params=api.params(),
             json={
                 "operator": "e2e-test",
-                "request_id": "stop-nonexistent",
+                "request_id": uuid.uuid4().hex,
             },
         )
         assert response.status_code in (200, 400, 404, 500), (

@@ -6,16 +6,18 @@ Covers Phase 4.4 of Wave 05: exercise error/edge paths in bot run lifecycle.
 
 import os
 
+import uuid
+
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     APITestHelper,
     cleanup_bot,
     create_test_bot,
     find_existing_bot,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.bot_run_lifecycle]
+pytestmark = [pytest.mark.bot_run_lifecycle]
 
 
 def _get_bot_uuid(bot: dict) -> str:
@@ -160,7 +162,7 @@ class TestBotRunDestroyErrors:
             params=api.params(),
             json={
                 "operator": "e2e-test",
-                "request_id": "destroy-nonexistent",
+                "request_id": uuid.uuid4().hex,
             },
         )
         assert response.status_code in (200, 400, 404, 500, 501), (
@@ -183,7 +185,7 @@ class TestBotRunDestroyErrors:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"destroy-1-{unique_id}",
+                    "request_id": uuid.uuid4().hex,
                 },
             )
             assert response1.status_code in (200, 400, 404, 409, 500, 501), (
@@ -194,7 +196,7 @@ class TestBotRunDestroyErrors:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"destroy-2-{unique_id}",
+                    "request_id": uuid.uuid4().hex,
                 },
             )
             assert response2.status_code in (200, 400, 404, 409, 500, 501), (

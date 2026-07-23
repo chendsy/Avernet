@@ -5,16 +5,20 @@ aggregation, health check endpoints, engine adapter error simulations,
 and bot detail with health_check flag.
 """
 
+import uuid
+
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     APITestHelper,
+    ASYNC_POLL_TIMEOUT,
+    activate_bot,
     cleanup_bot,
     create_test_bot,
     find_existing_bot,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.bot_run_lifecycle]
+pytestmark = [pytest.mark.bot_run_lifecycle]
 
 
 def _get_bot_uuid(bot: dict) -> str:
@@ -79,7 +83,7 @@ class TestBotStopAndPoll:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"stop-poll-{unique_id}",
+                    "request_id": uuid.uuid4().hex,
                 },
             )
             assert stop_resp.status_code in (200, 400, 404, 500), (
@@ -103,7 +107,7 @@ class TestBotStopAndPoll:
             params=api.params(),
             json={
                 "operator": "e2e-test",
-                "request_id": "stop-nonexistent",
+                "request_id": uuid.uuid4().hex,
             },
         )
         assert response.status_code in (200, 400, 404, 500), (
@@ -112,7 +116,7 @@ class TestBotStopAndPoll:
 
 
 class TestBotRestart:
-    """Bot restart after stop — POST /api/v1/bots/{uuid}/restart."""
+    """Bot restart — POST /api/v1/bots/{uuid}/restart."""
 
     @pytest.mark.asyncio
     async def test_restart_after_stop(
@@ -122,43 +126,54 @@ class TestBotRestart:
         bot_uuid = _get_bot_uuid(bot)
         created_bot_uuids.append(bot_uuid)
         try:
+            await activate_bot(api, bot, timeout_seconds=ASYNC_POLL_TIMEOUT)
+            stop_resp = await api.client.post(
+                f"{api.bot_url(bot_uuid)}/stop",
+                params=api.params(),
+                json={"operator": "e2e-test", "request_id": uuid.uuid4().hex},
+            )
+            assert stop_resp.status_code == 200
+            publish_id = stop_resp.json()["data"]["publish_id"]
+            from tests.testclient.conftest import approve_and_complete
+            await approve_and_complete(api, publish_id, timeout_seconds=ASYNC_POLL_TIMEOUT)
             restart_resp = await api.client.post(
                 f"{api.bot_url(bot_uuid)}/restart",
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"restart-{unique_id}",
+                    "request_id": uuid.uuid4().hex,
                 },
             )
-            assert restart_resp.status_code in (200, 400, 404, 500), (
-                f"Restart returned {restart_resp.status_code}: {restart_resp.text}"
+            assert restart_resp.status_code == 200, (
+                f"Restart after stop returned {restart_resp.status_code}: {restart_resp.text}"
             )
-            if restart_resp.status_code == 200:
-                data = restart_resp.json().get("data", restart_resp.json())
-                assert "publish_id" in data or "status" in data, (
-                    f"Unexpected restart response: {data}"
-                )
+            data = restart_resp.json()["data"]
+            assert "publish_id" in data, f"Expected publish_id in restart response: {data}"
         finally:
             await cleanup_bot(api, bot_uuid)
 
     @pytest.mark.asyncio
-    async def test_restart_existing_bot(self, api: APITestHelper) -> None:
-        bot = await find_existing_bot(api)
-        if bot is None:
-            pytest.skip("No existing bots in system")
+    async def test_restart_existing_bot(
+        self, api: APITestHelper, unique_id: str, created_bot_uuids: list[str]
+    ) -> None:
+        bot = await create_test_bot(api, f"e2e-restart-exist-{unique_id}")
         bot_uuid = _get_bot_uuid(bot)
-
-        response = await api.client.post(
-            f"{api.bot_url(bot_uuid)}/restart",
-            params=api.params(),
-            json={
-                "operator": "e2e-test",
-                "request_id": "restart-existing",
-            },
-        )
-        assert response.status_code in (200, 400, 404, 500), (
-            f"Restart existing returned {response.status_code}: {response.text}"
-        )
+        created_bot_uuids.append(bot_uuid)
+        try:
+            await activate_bot(api, bot, timeout_seconds=ASYNC_POLL_TIMEOUT)
+            response = await api.client.post(
+                f"{api.bot_url(bot_uuid)}/restart",
+                params=api.params(),
+                json={
+                    "operator": "e2e-test",
+                    "request_id": uuid.uuid4().hex,
+                },
+            )
+            assert response.status_code == 200, (
+                f"Restart existing bot failed: {response.status_code} {response.text}"
+            )
+        finally:
+            await cleanup_bot(api, bot_uuid)
 
     @pytest.mark.asyncio
     async def test_restart_nonexistent_bot(self, api: APITestHelper) -> None:
@@ -167,7 +182,7 @@ class TestBotRestart:
             params=api.params(),
             json={
                 "operator": "e2e-test",
-                "request_id": "restart-nonexistent",
+                "request_id": uuid.uuid4().hex,
             },
         )
         assert response.status_code in (200, 400, 404, 500), (
