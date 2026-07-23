@@ -131,6 +131,7 @@ markers = [
   "paas_operations: marks e2e tests for PaaS service layer operations",
   "bot_run_lifecycle: marks e2e tests for bot run lifecycle (start → run → stop)",
   "bot_run_concurrency: marks e2e tests for bot run concurrency patterns (worker, pool, dispatch)",
+  "health_check: marks e2e tests for health check provider behavior",
 ]
 
 # --- 构建后端定义 ---

@@ -295,6 +295,25 @@ run_e2e_bot_run_concurrency() {
     return $rc
 }
 
+run_testclient_tests() {
+    log_stage
+    echo "[TESTCLIENT] test-testclient: in-process ASGI tests"
+    mkdir -p "$REPORT_DIR"
+
+    # TestClient does not need a running app — it runs against the ASGI app
+    # in the same process using ASGITransport. The bootstrap_init fixture
+    # initializes the full DI container with it-sqlite overlay.
+    _run_pytest uv run pytest tests/testclient/ -v --durations=0 --log-cli-level=INFO \
+        --tb=short \
+        --cov=src/secbaas \
+        --cov-report=xml:"$REPORT_DIR/coverage-testclient.xml" \
+        --cov-report=html:"$REPORT_DIR/htmlcov-testclient" \
+        --junitxml="$REPORT_DIR/testclient.xml" --color=yes
+    local rc=$?
+    if [[ $rc -ne 0 ]]; then log_error "test-testclient failed"; fi
+    return $rc
+}
+
 run_e2e_tests() {
     local mode="${1:-${_BAAS_MODE:-bare}}"
     local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
@@ -313,6 +332,8 @@ run_e2e_tests() {
     run_e2e_paas_operations "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_bot_run_lifecycle "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_bot_run_concurrency "$mode" "$overlay" || ec=$((ec + $?))
+
+    run_testclient_tests || ec=$((ec + $?))
 
     _merge_e2e_coverage
 
