@@ -177,73 +177,6 @@ run_one_e2e_test() {
         --tb=short -m "e2e" --color=yes
 }
 
-run_e2e_mock_failure_hook() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E Mock failure: hook"
-    mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="mock-hook"
-    _start_app "$overlay" "PAAS_MOCK_HOOK_FAILURE"
-    _run_pytest uv run pytest tests/e2e/mock_paas_failure/ -v --durations=0 \
-        --log-cli-level=INFO --tb=short \
-        -m "mock_paas_hook_failure" --junitxml="$REPORT_DIR/e2e-mock-hook.xml" --color=yes
-    local rc=$?
-    _stop_app
-    return $rc
-}
-
-run_e2e_mock_failure_create() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E Mock failure: create"
-    mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="mock-create"
-    _start_app "$overlay" "PAAS_MOCK_CREATE_FAILURE"
-    _run_pytest uv run pytest tests/e2e/mock_paas_failure/ -v --durations=0 \
-        --log-cli-level=INFO --tb=short \
-        -m "mock_paas_create_failure" --junitxml="$REPORT_DIR/e2e-mock-create.xml" --color=yes
-    local rc=$?
-    _stop_app
-    return $rc
-}
-
-run_e2e_mock_failure_destroy() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E Mock failure: destroy"
-    mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="mock-destroy"
-    _start_app "$overlay" "PAAS_MOCK_DESTROY_FAILURE"
-    _run_pytest uv run pytest tests/e2e/mock_paas_failure/ -v --durations=0 \
-        --log-cli-level=INFO --tb=short \
-        -m "mock_paas_destroy_failure" --junitxml="$REPORT_DIR/e2e-mock-destroy.xml" --color=yes
-    local rc=$?
-    _stop_app
-    return $rc
-}
-
-run_e2e_mock_failure_device_not_found() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E Mock failure: device-not-found"
-    mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="mock-device-not-found"
-    _start_app "$overlay" "PAAS_MOCK_DEVICE_NOT_FOUND"
-    _run_pytest uv run pytest tests/e2e/mock_paas_failure/ -v --durations=0 \
-        --log-cli-level=INFO --tb=short \
-        -m "mock_paas_device_not_found" \
-        --junitxml="$REPORT_DIR/e2e-mock-device-not-found.xml" --color=yes
-    local rc=$?
-    _stop_app
-    return $rc
-}
-
-
-
 run_e2e_paas_operations() {
     local mode="${1:-${_BAAS_MODE:-bare}}"
     local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
@@ -325,10 +258,6 @@ run_e2e_tests() {
     rm -rf "$COVERAGE_E2E_DIR"
 
     run_e2e_baseline "$mode" "$overlay" || ec=$((ec + $?))
-    run_e2e_mock_failure_hook "$mode" "$overlay" || ec=$((ec + $?))
-    run_e2e_mock_failure_create "$mode" "$overlay" || ec=$((ec + $?))
-    run_e2e_mock_failure_destroy "$mode" "$overlay" || ec=$((ec + $?))
-    run_e2e_mock_failure_device_not_found "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_paas_operations "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_bot_run_lifecycle "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_bot_run_concurrency "$mode" "$overlay" || ec=$((ec + $?))

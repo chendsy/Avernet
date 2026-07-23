@@ -473,6 +473,7 @@ async def approve_and_complete(
     publish_id: int,
     max_iterations: int = 15,
     bot_uuid: str | None = None,
+    timeout_seconds: float = 5.0,
 ) -> str:
     """Approve publish, send SUCCESS callbacks, and return final status.
 
@@ -528,7 +529,9 @@ async def approve_and_complete(
                 return "APPROVE_FAILED"
 
         t_cb = time.monotonic()
-        result = await try_send_callbacks_for_hook_devices(api, publish_id)
+        result = await try_send_callbacks_for_hook_devices(
+            api, publish_id, timeout_seconds=timeout_seconds,
+        )
         t_callback = time.monotonic() - t_cb
         if result is None:
             log.info(
@@ -541,7 +544,8 @@ async def approve_and_complete(
 
         t_w = time.monotonic()
         status = await wait_for_publish_status(
-            api, publish_id, {"SUCCESS", "FAILED", "APPROVING"}
+            api, publish_id, {"SUCCESS", "FAILED", "APPROVING"},
+            timeout_seconds=timeout_seconds,
         )
         t_wait = time.monotonic() - t_w
         if status in ("SUCCESS", "FAILED"):
@@ -567,13 +571,17 @@ async def approve_and_complete(
     return status
 
 
-async def activate_bot(api: APITestHelper, bot: dict) -> None:
+async def activate_bot(
+    api: APITestHelper, bot: dict, timeout_seconds: float = 5.0
+) -> None:
     """Activate a bot: approve + callback loop until complete."""
     t0 = time.monotonic()
     publish_id = bot.get("publish_id")
     if not publish_id:
         return
-    final = await approve_and_complete(api, publish_id)
+    final = await approve_and_complete(
+        api, publish_id, timeout_seconds=timeout_seconds
+    )
     log.info(
         f"[TIMING] activate_bot: {time.monotonic() - t0:.2f}s, final_status={final}"
     )

@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 # ── Transport fixture ─────────────────────────────────────────────────────
 
 DEFAULT_TIMEOUT = 120.0
+ASYNC_POLL_TIMEOUT = 0.5
 TEST_TENANT = "team_claw"
 """Tenant used by TestClient tests. Matches the seed data inserted
 by the stub SQLite ORM plugin (see ``_seed.py``)."""
@@ -127,6 +128,20 @@ from tests.e2e.conftest import (  # noqa: E402
     destroy_paas_device,
     find_existing_bot,
     set_mock_paas_failure,
+)
+
+from tests.e2e.hook_helpers import (  # noqa: E402
+    activate_bot,
+    approve_and_complete,
+    approve_publish,
+    assert_result_message_has_hook_data,
+    create_and_activate_bot,
+    create_hook_bot,
+    get_devices_from_progress,
+    get_publish_status,
+    get_running_batch_devices,
+    send_callbacks_for_hook_devices,
+    wait_for_publish_status,
 )
 
 
