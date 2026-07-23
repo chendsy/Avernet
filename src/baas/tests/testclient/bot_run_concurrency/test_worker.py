@@ -4,16 +4,23 @@ Covers: worker task pick-up, stop/restart handling, executor command execution
 and timeout, and full lifecycle sequencing through the management API.
 """
 
+import uuid
+
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     APITestHelper,
     cleanup_bot,
     create_test_bot,
     find_existing_bot,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.bot_run_concurrency]
+pytestmark = [pytest.mark.bot_run_concurrency]
+
+
+def _req_id(prefix: str, unique_id: str) -> str:
+    """Build request_id of at least 32 chars."""
+    return f"{prefix}-{unique_id}".ljust(32, "0")
 
 
 def _bot_uuid(bot: dict) -> str:
@@ -105,7 +112,7 @@ class TestWorkerStop:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"wstop-{unique_id}",
+                    "request_id": _req_id("wstop", unique_id),
                 },
             )
             assert response.status_code in (200, 400, 404, 500), (
@@ -129,7 +136,7 @@ class TestWorkerStop:
             params=api.params(),
             json={
                 "operator": "e2e-test",
-                "request_id": "stop-noop",
+                "request_id": uuid.uuid4().hex,
             },
         )
         assert response.status_code in (200, 400, 404, 500), (
@@ -149,7 +156,7 @@ class TestWorkerStop:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"dblstop-1-{unique_id}",
+                    "request_id": _req_id("dblstop-1", unique_id),
                 },
             )
             assert response.status_code in (200, 400, 404, 500)
@@ -159,7 +166,7 @@ class TestWorkerStop:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"dblstop-2-{unique_id}",
+                    "request_id": _req_id("dblstop-2", unique_id),
                 },
             )
             assert response.status_code in (200, 400, 404, 409, 500), (
@@ -185,7 +192,7 @@ class TestWorkerRestart:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"wrestart-{unique_id}",
+                    "request_id": _req_id("wrestart", unique_id),
                 },
             )
             assert response.status_code in (200, 400, 404, 409, 500), (
@@ -207,7 +214,7 @@ class TestWorkerRestart:
             params=api.params(),
             json={
                 "operator": "e2e-test",
-                "request_id": "wrestart-noop",
+                "request_id": uuid.uuid4().hex,
             },
         )
         assert response.status_code in (200, 400, 404, 500), (
@@ -227,7 +234,7 @@ class TestWorkerRestart:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"rs-stop-{unique_id}",
+                    "request_id": _req_id("rs-stop", unique_id),
                 },
             )
 
@@ -236,7 +243,7 @@ class TestWorkerRestart:
                 params=api.params(),
                 json={
                     "operator": "e2e-test",
-                    "request_id": f"rs-restart-{unique_id}",
+                    "request_id": _req_id("rs-restart", unique_id),
                 },
             )
             assert response.status_code in (200, 400, 404, 409, 500), (
@@ -412,7 +419,7 @@ class TestMultipleBotOperations:
                     params=api.params(),
                     json={
                         "operator": "e2e-test",
-                        "request_id": f"multi-stop-{unique_id}",
+                        "request_id": _req_id("multi-stop", unique_id),
                     },
                 )
                 assert stop_resp.status_code in (200, 400, 404, 500), (
@@ -427,7 +434,7 @@ class TestMultipleBotOperations:
                     params=api.params(),
                     json={
                         "operator": "e2e-test",
-                        "request_id": f"multi-restart-{unique_id}",
+                        "request_id": _req_id("multi-restart", unique_id),
                     },
                 )
                 assert restart_resp.status_code in (200, 400, 404, 409, 500), (

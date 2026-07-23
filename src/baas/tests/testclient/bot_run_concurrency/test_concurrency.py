@@ -17,14 +17,13 @@ import uuid
 import httpx
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     APITestHelper,
     cleanup_bot,
     create_test_bot,
-    find_existing_bot,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.bot_run_concurrency]
+pytestmark = [pytest.mark.bot_run_concurrency]
 
 PARALLEL_BOT_COUNT = 5
 HIGH_DEVICE_COUNT = 20

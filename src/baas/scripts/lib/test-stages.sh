@@ -211,22 +211,6 @@ run_e2e_bot_run_lifecycle() {
     return $rc
 }
 
-run_e2e_bot_run_concurrency() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E Bot run concurrency tests"
-    mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="bot-run-concurrency"
-    _start_app "$overlay"
-    _run_pytest uv run pytest tests/e2e/bot_run_concurrency/ -v --durations=0 \
-        --log-cli-level=INFO --tb=short \
-        -m "bot_run_concurrency" \
-        --junitxml="$REPORT_DIR/e2e-bot-run-concurrency.xml" --color=yes
-    local rc=$?
-    _stop_app
-    return $rc
-}
 
 run_testclient_tests() {
     log_stage
@@ -260,7 +244,6 @@ run_e2e_tests() {
     run_e2e_baseline "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_paas_operations "$mode" "$overlay" || ec=$((ec + $?))
     run_e2e_bot_run_lifecycle "$mode" "$overlay" || ec=$((ec + $?))
-    run_e2e_bot_run_concurrency "$mode" "$overlay" || ec=$((ec + $?))
 
     run_testclient_tests || ec=$((ec + $?))
 
