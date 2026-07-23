@@ -28,6 +28,7 @@ from engine.community.core.skills.models import (
     PoolLayoutProbeStatus,
     PoolMappingPublishResult,
     PoolMappingVerificationResult,
+    PoolQuarantineCleanupResult,
     SyncSymlinksResult,
 )
 from engine.community.manager import EngineManager
@@ -272,6 +273,12 @@ def test_pool_activation_and_mapping_routes_are_capability_independent(
             evidence={"source": "current_pool"},
         ),
     )
+    plugin.cleanup_pool_quarantine = AsyncMock(
+        return_value=PoolQuarantineCleanupResult(
+            status="CLEANED",
+            evidence={"path_absent": True},
+        ),
+    )
     plugin.publish_pool_mappings = AsyncMock(
         return_value=PoolMappingPublishResult(
             published=True,
@@ -303,6 +310,10 @@ def test_pool_activation_and_mapping_routes_are_capability_independent(
             "registered_local_names": ["a"],
         },
     )
+    cleanup = client.post(
+        "/api/skills/layout/quarantine/cleanup",
+        json={"migration_generation": "generation-1"},
+    )
     published = client.post(
         "/api/skills/layout/mappings/publish",
         json={"mappings": mappings},
@@ -314,10 +325,12 @@ def test_pool_activation_and_mapping_routes_are_capability_independent(
 
     assert activation.json()["data"]["committed"] is True
     assert rollback.json()["data"]["committed"] is True
+    assert cleanup.json()["data"]["status"] == "CLEANED"
     assert published.json()["data"]["published"] is True
     assert verified.json()["data"]["valid"] is True
     plugin.activate_pool_layout.assert_awaited_once()
     plugin.rollback_pool_layout.assert_awaited_once()
+    plugin.cleanup_pool_quarantine.assert_awaited_once()
     plugin.publish_pool_mappings.assert_awaited_once()
     plugin.verify_pool_mappings.assert_awaited_once()
 
@@ -350,6 +363,11 @@ def test_pool_activation_and_mapping_routes_are_capability_independent(
                 "rollback_generation": "rollback-1",
                 "registered_local_names": [],
             },
+        ),
+        (
+            "cleanup_pool_quarantine",
+            "/api/skills/layout/quarantine/cleanup",
+            {"migration_generation": "generation-1"},
         ),
         (
             "publish_pool_mappings",

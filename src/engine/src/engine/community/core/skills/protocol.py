@@ -32,6 +32,8 @@ from engine.community.core.skills.models import (
     PoolLayoutActivateRequest,
     PoolLayoutActivationResult,
     PoolLayoutRollbackRequest,
+    PoolQuarantineCleanupRequest,
+    PoolQuarantineCleanupResult,
     PoolLayoutProbeRequest,
     PoolLayoutProbeResult,
     PoolMappingPublishResult,
@@ -182,6 +184,14 @@ class SkillsService(Protocol):
         auth: AuthContext | None = None,
     ) -> PoolLayoutActivationResult:
         """从当前 Pool 重建 Legacy local 并原子切回。"""
+        ...
+
+    async def cleanup_pool_quarantine(
+        self,
+        request: PoolQuarantineCleanupRequest,
+        auth: AuthContext | None = None,
+    ) -> PoolQuarantineCleanupResult:
+        """Delete one exact retained migration generation idempotently."""
         ...
 
     async def probe_pool_layout(

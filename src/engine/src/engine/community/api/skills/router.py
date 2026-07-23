@@ -21,6 +21,7 @@ from engine.community.api.skills.schemas import (
     PoolLayoutActivateRequest,
     PoolLayoutActivateResponse,
     PoolLayoutRollbackRequest,
+    PoolQuarantineCleanupRequest,
     PoolMappingVerifyRequest,
     RuntimeLayoutProbeApiResponse,
     RuntimeLayoutProbeRequest,
@@ -35,6 +36,7 @@ from engine.community.core.skills.models import (
     CleanSymlinksRequest,
     PoolLayoutActivateRequest as PoolLayoutActivateCommand,
     PoolLayoutRollbackRequest as PoolLayoutRollbackCommand,
+    PoolQuarantineCleanupRequest as PoolQuarantineCleanupCommand,
     PoolLayoutProbeRequest as PoolLayoutProbeCommand,
     SymlinkItem,
     SyncBindPathsRequest,
@@ -134,6 +136,27 @@ async def rollback_runtime_skills_layout(
             if result.committed
             else "Skills Pool 显式回滚未提交"
         ),
+    )
+
+
+@router.post("/layout/quarantine/cleanup", response_model=ApiResponse)
+async def cleanup_runtime_skills_quarantine(
+    body: PoolQuarantineCleanupRequest,
+) -> ApiResponse:
+    """幂等清理固定 Pool 根下的一个 migration generation。"""
+    plugin = _skills_plugin()
+    try:
+        result = await plugin.cleanup_pool_quarantine(
+            PoolQuarantineCleanupCommand(
+                migration_generation=body.migration_generation,
+            )
+        )
+    except CapabilityNotSupportedError as error:
+        raise HTTPException(status_code=501, detail=str(error)) from error
+    return ApiResponse(
+        success=result.status in {"CLEANED", "ALREADY_ABSENT"},
+        data=result.to_data(),
+        message="Migration Quarantine 清理完成",
     )
 
 

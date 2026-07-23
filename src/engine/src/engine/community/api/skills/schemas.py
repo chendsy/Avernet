@@ -80,6 +80,10 @@ class PoolLayoutRollbackRequest(BaseModel):
     registered_local_names: list[str]
 
 
+class PoolQuarantineCleanupRequest(BaseModel):
+    migration_generation: str
+
+
 class PoolLayoutActivateResponse(BaseModel):
     committed: bool
     status: Literal[
@@ -119,6 +123,7 @@ __all__ = [
     "RuntimeLayoutProbeApiResponse",
     "PoolLayoutActivateRequest",
     "PoolLayoutRollbackRequest",
+    "PoolQuarantineCleanupRequest",
     "PoolLayoutActivateResponse",
     "PoolLayoutActivateApiResponse",
     "PoolMappingVerifyRequest",

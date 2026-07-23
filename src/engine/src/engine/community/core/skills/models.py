@@ -197,6 +197,20 @@ class PoolLayoutRollbackRequest:
 
 
 @dataclass
+class PoolQuarantineCleanupRequest:
+    migration_generation: str
+
+
+@dataclass
+class PoolQuarantineCleanupResult:
+    status: str
+    evidence: dict[str, Any] = field(default_factory=dict)
+
+    def to_data(self) -> dict[str, Any]:
+        return {"status": self.status, "evidence": self.evidence}
+
+
+@dataclass
 class PoolLayoutProbeRequest:
     """运行时 Pool layout 核验请求。"""
 
@@ -292,6 +306,8 @@ __all__ = [
     "CleanSymlinksResult",
     "PoolLayoutActivateRequest",
     "PoolLayoutRollbackRequest",
+    "PoolQuarantineCleanupRequest",
+    "PoolQuarantineCleanupResult",
     "PoolLayoutActivationResult",
     "PoolLayoutActivationStatus",
     "PoolLayoutProbeRequest",
