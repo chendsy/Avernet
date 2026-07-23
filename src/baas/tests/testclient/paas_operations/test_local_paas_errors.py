@@ -4,14 +4,14 @@ import uuid
 
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     TEMPLATE_LOCAL,
     APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.paas_operations]
+pytestmark = [pytest.mark.paas_operations]
 
 
 class TestLocalPaasErrors:

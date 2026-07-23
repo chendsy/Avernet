@@ -15,14 +15,14 @@ from typing import Any
 
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     TEMPLATE_LOCAL,
     APITestHelper,
     create_paas_device,
     destroy_paas_device,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.paas_operations]
+pytestmark = [pytest.mark.paas_operations]
 
 
 def _get_device_id(device: dict[str, object]) -> str:

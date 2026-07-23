@@ -177,22 +177,6 @@ run_one_e2e_test() {
         --tb=short -m "e2e" --color=yes
 }
 
-run_e2e_paas_operations() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E PaaS operations tests"
-    mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="paas-operations"
-    _start_app "$overlay"
-    _run_pytest uv run pytest tests/e2e/paas_operations/ -v --durations=0 \
-        --log-cli-level=INFO --tb=short \
-        -m "paas_operations" \
-        --junitxml="$REPORT_DIR/e2e-paas-operations.xml" --color=yes
-    local rc=$?
-    _stop_app
-    return $rc
-}
 
 
 
@@ -226,7 +210,6 @@ run_e2e_tests() {
     rm -rf "$COVERAGE_E2E_DIR"
 
     run_e2e_baseline "$mode" "$overlay" || ec=$((ec + $?))
-    run_e2e_paas_operations "$mode" "$overlay" || ec=$((ec + $?))
 
     run_testclient_tests || ec=$((ec + $?))
 

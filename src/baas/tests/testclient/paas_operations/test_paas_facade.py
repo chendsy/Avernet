@@ -1,6 +1,6 @@
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     TEMPLATE_ARCA,
     TEMPLATE_DOCKER,
     TEMPLATE_K8S,
@@ -13,7 +13,7 @@ from ..conftest import (
     destroy_paas_device,
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.paas_operations]
+pytestmark = [pytest.mark.paas_operations]
 
 
 def _get_device_id(device: dict) -> str:

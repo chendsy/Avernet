@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from ..conftest import (
+from tests.testclient.conftest import (
     TEMPLATE_TECLAW,
     APITestHelper,
     create_paas_device,
@@ -24,7 +24,7 @@ _NON_ARCA_XFAIL = pytest.mark.xfail(
     "ArcaDeviceConfig|SigmaDeviceConfig — non-ARCA/SIGMA gets 500",
 )
 
-pytestmark = [pytest.mark.e2e, pytest.mark.paas_operations]
+pytestmark = [pytest.mark.paas_operations]
 
 
 class TestTeClawCreateDevice:
