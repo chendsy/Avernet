@@ -47,14 +47,22 @@ DEFAULT_TEMPLATE_UUID = TEMPLATE_ARCA
 
 
 @pytest.fixture(scope="session")
-def _testclient_app():
-    """Import the pre-wired app after ``bootstrap_init`` has run.
+def _hydrate_bcn_secret(bootstrap_init):
+    """Pre-populate BCN stub secret so auth tests pass without prod config."""
+    container = bootstrap_init
+    plugins = container.plugins()
+    secret_plugin = plugins.secret_plugin()
+    secret_plugin.set_secret(
+        "other_manual_secbaas_bcn_to_provider_token", "valid-token"
+    )
 
-    ``bootstrap_init`` (session-scoped, loaded by root ``conftest.py``)
-    mutates the module-level ``app`` object before this fixture is called.
-    """
+
+@pytest.fixture(scope="session")
+def _testclient_app(_hydrate_bcn_secret):
+    """Import the pre-wired app after ``bootstrap_init`` and BCN hydration."""
     from secbaas.community.adapters.web.app import app
 
+    _patch_request_validation_handler(app)
     return app
 
 
@@ -79,6 +87,7 @@ async def http_client(
 
 
 # ── Reused E2E helpers (identical API surface) ─────────────────────────────
+
 
 @pytest.fixture(scope="session")
 def test_tenant() -> str:
@@ -129,20 +138,38 @@ from tests.e2e.conftest import (  # noqa: E402
     find_existing_bot,
     set_mock_paas_failure,
 )
-
 from tests.e2e.hook_helpers import (  # noqa: E402
-    activate_bot,
-    approve_and_complete,
+    _ColorLogger,
     approve_publish,
     assert_result_message_has_hook_data,
     create_and_activate_bot,
     create_hook_bot,
+    dump_publish_diagnostics,
     get_devices_from_progress,
     get_publish_status,
     get_running_batch_devices,
     send_callbacks_for_hook_devices,
+    send_mixed_callbacks,
     wait_for_publish_status,
 )
+from tests.e2e.hook_helpers import (
+    activate_bot as _activate_bot,
+)
+from tests.e2e.hook_helpers import (
+    approve_and_complete as _approve_and_complete,
+)
+
+
+def activate_bot(api, bot, timeout_seconds=0.5):
+    return _activate_bot(api, bot, timeout_seconds=timeout_seconds)
+
+
+def approve_and_complete(
+    api, publish_id, max_iterations=3, bot_uuid=None, timeout_seconds=0.5
+):
+    return _approve_and_complete(
+        api, publish_id, max_iterations, bot_uuid, timeout_seconds
+    )
 
 
 @pytest.fixture
@@ -157,6 +184,7 @@ def mock_paas_env() -> dict[str, str]:
 
 # ── Bot lifecycle fixtures ─────────────────────────────────────────────────
 
+
 @pytest_asyncio.fixture
 async def created_bot(
     api: APITestHelper,
@@ -164,7 +192,9 @@ async def created_bot(
     created_bot_uuids: list[str],
 ) -> dict[str, Any]:
     """Create and activate a test bot, with cleanup on teardown."""
-    bot = await create_test_bot(api, unique_bot_name, template_uuid=DEFAULT_TEMPLATE_UUID)
+    bot = await create_test_bot(
+        api, unique_bot_name, template_uuid=DEFAULT_TEMPLATE_UUID
+    )
     created_bot_uuids.append(bot["bot_uuid"])
     await activate_test_bot(api, bot)
     yield bot
@@ -186,7 +216,43 @@ async def created_paas_device(
         pass  # Best-effort cleanup
 
 
+# ── RequestValidationError handler patch ──────────────────────────────────
+# ASGI transport (Starlette TestClient) attaches raw ValueError/Exception
+# objects to RequestValidationError.ctx — these are not JSON-serializable.
+# Wrap the error list to convert Exception->str in ctx before serialization.
+
+
+def _sanitize_validation_errors(errors: list[dict]) -> list[dict]:
+    """Convert non-JSON-serializable values (Exception, Ellipsis) in error dicts."""
+    for err in errors:
+        ctx = err.get("ctx")
+        if isinstance(ctx, dict):
+            for k, v in ctx.items():
+                if isinstance(v, Exception):
+                    ctx[k] = str(v)
+        if err.get("input") is ...:
+            err["input"] = None
+    return errors
+
+
+def _patch_request_validation_handler(app):
+    """Override the app's RequestValidationError handler to sanitize ctx."""
+    from fastapi import Request
+    from fastapi.exceptions import RequestValidationError
+    from starlette.responses import JSONResponse
+
+    @app.exception_handler(RequestValidationError)
+    async def _safe_validation_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={"detail": _sanitize_validation_errors(exc.errors())},
+        )
+
+
 # ── dependency_overrides helper ────────────────────────────────────────────
+
 
 def override_dependency(app, dep_name: str, factory):
     """Override a ``Depends(Provide[Container.x])`` dependency by name.

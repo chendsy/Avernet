@@ -1124,9 +1124,7 @@ class DefaultBotManagementService(BotManageService):
                 )
 
             # Merge with existing config
-            record = self._bot_repo.get_by_bot_uuid(
-                uuid=bot_uuid, tenant=tenant, env=env
-            )
+            record = self._get_bot_record_by_uuid(bot_uuid, tenant)
             stored_config = (
                 BotConfig.model_validate(record.extra_config)
                 if record and record.extra_config

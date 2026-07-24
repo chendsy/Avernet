@@ -13,7 +13,6 @@ def _set_mock_failure(monkeypatch: pytest.MonkeyPatch, env_var: str) -> None:
 
 
 class TestPaasFacadeCreateFailure:
-
     @pytest.mark.asyncio
     async def test_create_device_returns_500_with_mock_create_failure(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
@@ -25,7 +24,10 @@ class TestPaasFacadeCreateFailure:
             json={
                 "tenant_name": api.tenant,
                 "device_template_uuid": "TEMPLATE-4d0e2849d7004111836333de782b95d8",
-                "detail_config": {"name": f"fail-device-{unique_id}", "ttl_in_minutes": 60},
+                "detail_config": {
+                    "name": f"fail-device-{unique_id}",
+                    "ttl_in_minutes": 60,
+                },
             },
         )
         assert response.status_code == 500
@@ -42,7 +44,10 @@ class TestPaasFacadeCreateFailure:
             params=api.params(),
             json={
                 "tenant_name": api.tenant,
-                "detail_config": {"name": f"fail-device-{unique_id}", "ttl_in_minutes": 60},
+                "detail_config": {
+                    "name": f"fail-device-{unique_id}",
+                    "ttl_in_minutes": 60,
+                },
             },
         )
         assert response.status_code == 500

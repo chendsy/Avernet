@@ -10,7 +10,6 @@ _ACCEPTABLE = (200, 400, 401, 403, 404, 422, 500, 501)
 
 
 class TestPaasHealthOverview:
-
     @pytest.mark.asyncio
     async def test_overview_endpoint(self, api: APITestHelper) -> None:
         response = await api.client.get(
@@ -24,7 +23,6 @@ class TestPaasHealthOverview:
 
 
 class TestPaasProviders:
-
     @pytest.mark.asyncio
     async def test_arca_provider(self, api: APITestHelper) -> None:
         response = await api.client.get(
@@ -87,7 +85,6 @@ class TestPaasProviders:
 
 
 class TestPaasProviderFactory:
-
     @pytest.mark.asyncio
     async def test_all_providers_respond(self, api: APITestHelper) -> None:
         providers = ["arca", "poolab", "sigma", "local", "k8s", "docker"]
@@ -103,7 +100,6 @@ class TestPaasProviderFactory:
 
 
 class TestPaasHealthEdgeCases:
-
     @pytest.mark.asyncio
     async def test_unknown_provider_type(self, api: APITestHelper) -> None:
         response = await api.client.get(

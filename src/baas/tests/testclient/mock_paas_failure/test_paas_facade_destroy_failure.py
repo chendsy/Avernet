@@ -13,7 +13,6 @@ def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestPaasFacadeDestroyFailure:
-
     @pytest.mark.asyncio
     async def test_destroy_device_returns_error_with_mock_destroy_failure(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch

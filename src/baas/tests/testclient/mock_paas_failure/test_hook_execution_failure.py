@@ -17,7 +17,9 @@ from tests.testclient.conftest import (
 
 pytestmark = [pytest.mark.mock_paas_hook_failure]
 
-DESTROY_ONLY_HOOK_DEPLOY_CONFIG = {"before_destroy_cmd_hook": "/bin/echo 'hook executed'"}
+DESTROY_ONLY_HOOK_DEPLOY_CONFIG = {
+    "before_destroy_cmd_hook": "/bin/echo 'hook executed'"
+}
 
 
 def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -26,7 +28,6 @@ def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestCreateHookFailure:
-
     @pytest.mark.asyncio
     async def test_create_with_hook_failure(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
@@ -50,14 +51,15 @@ class TestCreateHookFailure:
 
 
 class TestDestroyHookFailure:
-
     @pytest.mark.asyncio
     async def test_destroy_with_hook_failure(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
     ) -> None:
         _set_mock(monkeypatch)
         bot = await create_test_bot(
-            api, f"destroy-hook-fail-{unique_id}", device_count=1,
+            api,
+            f"destroy-hook-fail-{unique_id}",
+            device_count=1,
             deploy_config=DESTROY_ONLY_HOOK_DEPLOY_CONFIG,
         )
         await activate_bot(api, bot)
@@ -79,13 +81,14 @@ class TestDestroyHookFailure:
 
 
 class TestRestartHookFailure:
-
     @pytest.mark.asyncio
     async def test_restart_with_hook_failure(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
     ) -> None:
         _set_mock(monkeypatch)
-        bot = await create_and_activate_bot(api, f"restart-hook-fail-{unique_id}", device_count=1)
+        bot = await create_and_activate_bot(
+            api, f"restart-hook-fail-{unique_id}", device_count=1
+        )
         resp = await api.client.post(
             api.bot_url(bot["bot_uuid"]) + "/restart",
             params=api.params(),

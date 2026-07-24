@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from tests.testclient.conftest import (
-    APITestHelper,
     ASYNC_POLL_TIMEOUT,
+    APITestHelper,
     approve_publish,
     create_hook_bot,
     create_test_bot,
@@ -21,7 +21,6 @@ def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestCreateDeviceFailure:
-
     @pytest.mark.asyncio
     async def test_create_device_fails(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
@@ -48,7 +47,9 @@ class TestCreateDeviceFailure:
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
     ) -> None:
         _set_mock(monkeypatch)
-        bot = await create_test_bot(api, f"create-fail-multi-{unique_id}", device_count=3)
+        bot = await create_test_bot(
+            api, f"create-fail-multi-{unique_id}", device_count=3
+        )
         publish_id = bot["publish_id"]
         code = await approve_publish(api, publish_id)
         assert code == 200
@@ -63,7 +64,6 @@ class TestCreateDeviceFailure:
 
 
 class TestCreateDeviceFailureWithHook:
-
     @pytest.mark.asyncio
     async def test_create_with_hook_device_failure(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str

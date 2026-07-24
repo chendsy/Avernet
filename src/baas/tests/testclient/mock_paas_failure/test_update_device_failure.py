@@ -5,8 +5,8 @@ import uuid
 import pytest
 
 from tests.testclient.conftest import (
-    APITestHelper,
     ASYNC_POLL_TIMEOUT,
+    APITestHelper,
     cleanup_bot,
     create_and_activate_bot,
     get_devices_from_progress,
@@ -22,7 +22,6 @@ def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestUpdateDeviceFailure:
-
     @pytest.mark.asyncio
     async def test_update_device_publish_fails_on_device_create(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch, unique_id: str
@@ -52,7 +51,9 @@ class TestUpdateDeviceFailure:
         devices = await get_devices_from_progress(api, publish_id_initial)
         if not devices:
             await cleanup_bot(api, bot_uuid)
-            pytest.skip(f"No devices found via publish {publish_id_initial} for bot {bot_uuid}")
+            pytest.skip(
+                f"No devices found via publish {publish_id_initial} for bot {bot_uuid}"
+            )
 
         # Now enable the mock failure — update-devices recreates devices
         # and the create step should fail.

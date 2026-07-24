@@ -13,7 +13,6 @@ def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestPaasFacadeHookFailure:
-
     @pytest.mark.asyncio
     async def test_execute_command_returns_exit_code_1(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch

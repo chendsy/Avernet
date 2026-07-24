@@ -11,7 +11,6 @@ SBOX_BASE = "/api/v1/sandbox-device"
 
 
 class TestActiveSandboxes:
-
     @pytest.mark.asyncio
     async def test_active_sandboxes_baas(self, api: APITestHelper) -> None:
         response = await api.client.get(
@@ -46,7 +45,6 @@ class TestActiveSandboxes:
 
 
 class TestProbeAndWarn:
-
     @pytest.mark.asyncio
     async def test_probe_and_warn(self, api: APITestHelper) -> None:
         response = await api.client.post(
@@ -60,7 +58,6 @@ class TestProbeAndWarn:
 
 
 class TestRenewTTL:
-
     @pytest.mark.asyncio
     async def test_renew_ttl(self, api: APITestHelper) -> None:
         response = await api.client.post(
@@ -74,7 +71,6 @@ class TestRenewTTL:
 
 
 class TestSandboxReverseLookup:
-
     @pytest.mark.asyncio
     async def test_sandbox_reverse_lookup(self, api: APITestHelper) -> None:
         response = await api.client.get(
@@ -87,7 +83,6 @@ class TestSandboxReverseLookup:
 
 
 class TestPagination:
-
     @pytest.mark.asyncio
     async def test_active_sandboxes_pagination(self, api: APITestHelper) -> None:
         response = await api.client.get(

@@ -11,7 +11,6 @@ pytestmark = [pytest.mark.health_check]
 
 
 class TestBotHealthService:
-
     @pytest.mark.asyncio
     async def test_health_with_real_bot(
         self, api: APITestHelper, created_bot: dict[str, Any]
@@ -58,7 +57,6 @@ class TestBotHealthService:
 
 
 class TestBotAlive:
-
     @pytest.mark.asyncio
     async def test_alive_with_real_bot(
         self, api: APITestHelper, created_bot: dict[str, Any]
@@ -95,7 +93,6 @@ class TestBotAlive:
 
 
 class TestBotActiveBotsAndDevices:
-
     @pytest.mark.asyncio
     async def test_active_bots_paginated(self, api: APITestHelper) -> None:
         response = await api.client.get(

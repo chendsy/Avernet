@@ -13,7 +13,6 @@ def _set_mock(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestPaasFacadeDeviceNotFound:
-
     @pytest.mark.asyncio
     async def test_destroy_nonexistent_device(
         self, api: APITestHelper, monkeypatch: pytest.MonkeyPatch

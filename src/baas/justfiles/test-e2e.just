@@ -1,3 +1,6 @@
+test-baseline:
+    source scripts/lib/test-stages.sh && run_baseline_tests
+
 test-e2e-baseline mode='bare' overlay='e2e-sqlite':
     source scripts/lib/test-stages.sh && run_e2e_baseline {{mode}} {{overlay}}
 

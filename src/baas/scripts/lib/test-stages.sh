@@ -91,7 +91,7 @@ run_unit_tests() {
     echo "[UNIT] test-ut: unit tests"
     mkdir -p "$REPORT_DIR"
     _run_pytest uv run pytest tests/ \
-        -m "not integration and not e2e" \
+        -m "not integration and not e2e and not baseline" \
         --ignore=tests/architecture -v \
         --junitxml="$REPORT_DIR/ut.xml" \
         --cov=src/secbaas \
@@ -123,7 +123,7 @@ run_ci_tests() {
     echo "[CI] test-ci: arch + unit (exclude e2e)"
     mkdir -p "$REPORT_DIR"
     _run_pytest uv run pytest tests/ \
-        -m "not e2e" \
+        -m "not e2e and not baseline" \
         -v \
         --junitxml="$REPORT_DIR/TEST-unit.xml" \
         --cov=src/secbaas \
@@ -136,22 +136,19 @@ run_ci_tests() {
     return $rc
 }
 
-run_e2e_baseline() {
-    local mode="${1:-${_BAAS_MODE:-bare}}"
-    local overlay="${2:-${_BAAS_OVERLAY:-e2e-sqlite}}"
-    log_sub "E2E Baseline tests"
+run_baseline_tests() {
+    log_stage
+    echo "[BASELINE] test-baseline: ASGI coverage-gap tests"
     mkdir -p "$REPORT_DIR"
-    export _BAAS_MODE="$mode"
-    export SESSION_LABEL="baseline"
 
-    _start_app "$overlay"
-
-    _run_pytest uv run pytest tests/e2e/baseline/ -v --durations=0 --log-cli-level=INFO \
-        --tb=short -m "e2e and baseline" \
-        --junitxml="$REPORT_DIR/e2e-baseline.xml" --color=yes
+    _run_pytest uv run pytest tests/testclient/baseline/ -v --durations=0 \
+        --log-cli-level=INFO --tb=short \
+        --cov=src/secbaas --cov-append \
+        --cov-report=xml:"$REPORT_DIR/coverage.xml" \
+        --cov-report=html:"$REPORT_DIR/html" \
+        --junitxml="$REPORT_DIR/baseline.xml" --color=yes
     local rc=$?
-
-    _stop_app
+    if [[ $rc -ne 0 ]]; then log_error "test-baseline failed"; fi
     return $rc
 }
 
@@ -209,7 +206,6 @@ run_e2e_tests() {
 
     rm -rf "$COVERAGE_E2E_DIR"
 
-    run_e2e_baseline "$mode" "$overlay" || ec=$((ec + $?))
 
     run_testclient_tests || ec=$((ec + $?))
 

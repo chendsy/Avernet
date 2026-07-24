@@ -10,8 +10,8 @@ import uuid
 import pytest
 
 from tests.testclient.conftest import (
-    APITestHelper,
     ASYNC_POLL_TIMEOUT,
+    APITestHelper,
     activate_bot,
     cleanup_bot,
     create_test_bot,
@@ -135,7 +135,10 @@ class TestBotRestart:
             assert stop_resp.status_code == 200
             publish_id = stop_resp.json()["data"]["publish_id"]
             from tests.testclient.conftest import approve_and_complete
-            await approve_and_complete(api, publish_id, timeout_seconds=ASYNC_POLL_TIMEOUT)
+
+            await approve_and_complete(
+                api, publish_id, timeout_seconds=ASYNC_POLL_TIMEOUT
+            )
             restart_resp = await api.client.post(
                 f"{api.bot_url(bot_uuid)}/restart",
                 params=api.params(),
@@ -148,7 +151,9 @@ class TestBotRestart:
                 f"Restart after stop returned {restart_resp.status_code}: {restart_resp.text}"
             )
             data = restart_resp.json()["data"]
-            assert "publish_id" in data, f"Expected publish_id in restart response: {data}"
+            assert "publish_id" in data, (
+                f"Expected publish_id in restart response: {data}"
+            )
         finally:
             await cleanup_bot(api, bot_uuid)
 
