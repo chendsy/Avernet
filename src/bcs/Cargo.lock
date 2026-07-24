@@ -1367,6 +1367,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bcs-domain",
  "bytes",
  "futures",
  "serde",
@@ -1381,6 +1382,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bcs-domain",
  "bcs-storage-api",
  "chrono",
  "percent-encoding",
