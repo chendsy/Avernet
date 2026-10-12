@@ -61,6 +61,7 @@ pub use application::interaction::{
 pub use application::channel::{
     ChannelInboundError, ChannelInboundFailureKind, ChannelService, ChannelUseCaseError,
     CreateBindingCommand, InboundMessage, OutboundMessage,
+    ProvisionChannelConversationCommand, ProvisionChannelConversationResult,
 };
 pub use application::message_log::{
     MessageLogContent, MessageLogEventType, MessageLogMode, MessageLogStatus,

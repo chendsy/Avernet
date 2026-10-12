@@ -612,6 +612,10 @@ pub struct ChatSendParams {
     /// BCS session layer id. None when not pinned to a session.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bcs_session_id: Option<String>,
+    /// Explicit engine-side session key. BCS session identity remains in
+    /// `bcs_session_id`; consumers may use this field for engine persistence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub engine_session_key: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -644,6 +648,10 @@ pub struct ChatInjectParams {
     /// BCS session layer id. None when not pinned to a session.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bcs_session_id: Option<String>,
+    /// Explicit engine-side session key. BCS session identity remains in
+    /// `bcs_session_id`; consumers may use this field for engine persistence.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub engine_session_key: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -1044,6 +1052,7 @@ pub fn build_chat_inject_frame(
         },
         session_context: group_context,
         bcs_session_id: wire_session_id.map(str::to_string),
+        engine_session_key: None,
         tags: tags.to_vec(),
         attachments: attachments.clone().unwrap_or_default(),
     };
@@ -1126,6 +1135,7 @@ pub fn build_chat_send_frame(
         timeout_ms: None,
         idempotency_key: Some(run_id.to_string()),
         bcs_session_id: wire_session_id.map(str::to_string),
+        engine_session_key: None,
         tags: tags.to_vec(),
         attachments: attachments.clone().unwrap_or_default(),
     };
@@ -1197,6 +1207,7 @@ pub fn build_direct_chat_send_frame(
         timeout_ms: None,
         idempotency_key: Some(run_id.to_string()),
         bcs_session_id: wire_session_id.map(str::to_string),
+        engine_session_key: None,
         tags: tags.to_vec(),
         attachments: attachments.clone().unwrap_or_default(),
     };
@@ -1262,6 +1273,7 @@ pub fn build_direct_chat_inject_frame(
         },
         session_context: group_context,
         bcs_session_id: wire_session_id.map(str::to_string),
+        engine_session_key: None,
         tags: tags.to_vec(),
         attachments: attachments.clone().unwrap_or_default(),
     };

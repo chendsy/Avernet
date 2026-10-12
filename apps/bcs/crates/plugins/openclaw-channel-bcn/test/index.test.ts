@@ -17,6 +17,7 @@ import {
   initAgentEventsSubscription,
   rememberTaskToolSession,
   resolveChatRunId,
+  resolveEngineSessionKey,
   resolveEngineSessionPeerId,
   resolveInboundSender,
   resolveGroupIdFromSessionKey,
@@ -149,6 +150,20 @@ describe('openclaw-channel-bcn', () => {
     assert.match(
       resolveChatRunId(undefined, '  '),
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it('uses an explicitly provisioned TeamClaw engine session key', () => {
+    assert.equal(
+      resolveEngineSessionKey(
+        { engine_session_key: ' user:136677:session:a:agent:bot-1 ' },
+        'bcs:derived-session',
+      ),
+      'user:136677:session:a:agent:bot-1',
+    );
+    assert.equal(
+      resolveEngineSessionKey({}, 'bcs:derived-session'),
+      'bcs:derived-session',
     );
   });
 

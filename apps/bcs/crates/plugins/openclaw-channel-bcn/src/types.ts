@@ -204,6 +204,8 @@ export interface ChatSendParams {
   session_key: string;
   bcs_group_id: string;
   bcs_session_id: string;
+  /** Explicit TeamClaw/OpenClaw engine session key provisioned for this channel conversation. */
+  engine_session_key?: string;
   message: MessageContent;
   channel: ChannelInfo;
   session_context: GroupContext;
@@ -232,6 +234,8 @@ export interface ChatInjectParams {
   session_key: string;
   bcs_group_id: string;
   bcs_session_id: string;
+  /** Explicit TeamClaw/OpenClaw engine session key provisioned for this channel conversation. */
+  engine_session_key?: string;
   message: MessageContent;
   channel: ChannelInfo;
   session_context: GroupContext;

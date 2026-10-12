@@ -4,6 +4,7 @@ use crate::BcsMessageFlow;
 use crate::group_flow::{
     ContextProjection, apply_outbound_interceptors, apply_session_participant_scope,
     context_projection_for_delivery, frame_protocol_version, request_session_key,
+    stamp_engine_session_key,
 };
 use crate::queued_payload::read_bounded_queued_payload;
 use bcs_domain::message_delivery::{DeliveryFlowKind, PersistedMessageDelivery};
@@ -728,6 +729,7 @@ async fn prepare_queued_group_bounded(
             Some(&row.session_id),
         )
     };
+    stamp_engine_session_key(&mut frame, session.meta.as_ref(), &row.target_bot_id);
     if let (Some(task_id), bcs_protocol::BcsFrame::Request(request)) = (task_id, &mut frame) {
         if let Some(params) = request.params.as_mut() {
             params["task_id"] = serde_json::json!(task_id);

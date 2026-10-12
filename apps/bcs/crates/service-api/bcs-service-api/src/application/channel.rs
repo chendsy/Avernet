@@ -119,6 +119,25 @@ pub struct InboundMessage {
     pub msg_id: String,
 }
 
+/// Pre-provision an external IM conversation onto a BCS session while
+/// preserving an explicit engine-side session key in Session.meta.
+#[derive(Debug, Clone)]
+pub struct ProvisionChannelConversationCommand {
+    pub channel_type: ChannelType,
+    pub account_ref: String,
+    pub im_conversation_id: String,
+    pub im_conversation_type: String,
+    pub engine_session_key: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProvisionChannelConversationResult {
+    pub binding_id: String,
+    pub bcs_session_id: String,
+    pub engine_session_key: String,
+    pub created: bool,
+}
+
 /// 创建 binding 入参。
 #[derive(Debug, Clone)]
 pub struct CreateBindingCommand {
@@ -169,6 +188,15 @@ pub trait ChannelService: Send + Sync {
         &self,
         cmd: CreateBindingCommand,
     ) -> Result<ChannelBinding, ChannelUseCaseError>;
+
+    async fn provision_conversation(
+        &self,
+        _cmd: ProvisionChannelConversationCommand,
+    ) -> Result<ProvisionChannelConversationResult, ChannelUseCaseError> {
+        Err(ChannelUseCaseError::InvalidParams(
+            "channel conversation provisioning is unavailable".to_string(),
+        ))
+    }
     async fn list_bindings(&self) -> Result<Vec<ChannelBinding>, ChannelUseCaseError>;
     async fn list_bindings_by_target(
         &self,

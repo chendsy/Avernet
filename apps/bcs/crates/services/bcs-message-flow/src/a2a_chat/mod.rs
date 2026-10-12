@@ -905,6 +905,7 @@ fn build_chat_send_frame(
         // their resolved session key is still the trusted run scope that the
         // plugin must echo on uplink events.
         bcs_session_id: Some(session_key.to_string()),
+        engine_session_key: None,
         tags: tags.to_vec(),
         attachments: Vec::new(),
     };

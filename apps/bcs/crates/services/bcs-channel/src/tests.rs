@@ -28,6 +28,7 @@ use bcs_domain::{
 use bcs_service_api::application::channel::{
     ChannelInboundError, ChannelInboundFailureKind, ChannelService, ChannelUseCaseError,
     CreateBindingCommand, InboundMessage, OutboundMessage,
+    ProvisionChannelConversationCommand,
 };
 use bcs_service_api::application::collaboration_runtime::{
     CancelStateMachineRunCommand, CollaborationRuntimeError, ConfigureGroupRuntimeCommand,
@@ -816,6 +817,7 @@ async fn delivered_texts(harness: &TestHarness) -> Vec<String> {
 
 
 mod bindings;
+mod provisioning;
 mod conversations;
 mod inbound;
 mod sessions;

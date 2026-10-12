@@ -520,6 +520,146 @@ impl ChannelService for BcsChannelService {
         Ok(())
     }
 
+    async fn provision_conversation(
+        &self,
+        cmd: ProvisionChannelConversationCommand,
+    ) -> Result<ProvisionChannelConversationResult, ChannelUseCaseError> {
+        let channel_type = normalize_required(&cmd.channel_type, "channel_type")?.to_string();
+        let account_ref = normalize_required(&cmd.account_ref, "account_ref")?.to_string();
+        let im_conversation_id =
+            normalize_required(&cmd.im_conversation_id, "im_conversation_id")?.to_string();
+        let im_conversation_type =
+            normalize_required(&cmd.im_conversation_type, "im_conversation_type")?.to_string();
+        let engine_session_key =
+            normalize_required(&cmd.engine_session_key, "engine_session_key")?.to_string();
+        if channel_type != "dingtalk" {
+            return Err(ChannelUseCaseError::InvalidParams(
+                "only dingtalk conversations can be provisioned".to_string(),
+            ));
+        }
+        if im_conversation_type != "2" {
+            return Err(ChannelUseCaseError::InvalidParams(
+                "provisioned dingtalk conversation_type must be 2".to_string(),
+            ));
+        }
+        if engine_session_key.len() > 1024 {
+            return Err(ChannelUseCaseError::InvalidParams(
+                "engine_session_key exceeds 1024 bytes".to_string(),
+            ));
+        }
+
+        let _guard = self.chat_session_resolution_lock.lock().await;
+        let binding = self
+            .bindings
+            .find_active_by_account(channel_type.clone(), &account_ref)
+            .await?
+            .ok_or_else(|| {
+                ChannelUseCaseError::NotFound(format!(
+                    "active binding not found for channel {channel_type} account {account_ref}"
+                ))
+            })?;
+        if binding.group_chat_scope != Some(GroupChatScope::ConversationShared) {
+            return Err(ChannelUseCaseError::InvalidParams(
+                "provisioned dingtalk conversation requires conversation_shared".to_string(),
+            ));
+        }
+        let bot_id = match &binding.target {
+            BindingTarget::Bot { bot_id } => bot_id.clone(),
+            BindingTarget::Group { .. } => {
+                return Err(ChannelUseCaseError::InvalidParams(
+                    "provisioned dingtalk conversation requires a bot binding".to_string(),
+                ));
+            }
+        };
+
+        if let Some(existing) = self
+            .conversations
+            .get(
+                &binding.id,
+                &im_conversation_id,
+                SessionScope::Conversation,
+                None,
+            )
+            .await?
+        {
+            if let Some(session) = self.sessions.get(&existing.bcs_session_id).await {
+                if session.status == SessionStatus::Running {
+                    if engine_session_key_from_meta(session.meta.as_ref())
+                        == Some(engine_session_key.as_str())
+                    {
+                        return Ok(ProvisionChannelConversationResult {
+                            binding_id: binding.id,
+                            bcs_session_id: session.id,
+                            engine_session_key,
+                            created: false,
+                        });
+                    }
+                    return Err(ChannelUseCaseError::Conflict(
+                        "dingtalk conversation is already bound to another engine session"
+                            .to_string(),
+                    ));
+                }
+            }
+        }
+
+        let group_id = self
+            .ensure_managed_single_bot_group(&binding, &bot_id)
+            .await?;
+        let session = self
+            .sessions
+            .create_channel(
+                &group_id,
+                &channel_type,
+                NewSessionParams {
+                    session_kind: SessionKind::Chat,
+                    caller_principal: Some(format!(
+                        "{channel_type}:{im_conversation_id}"
+                    )),
+                    meta: Some(serde_json::json!({
+                        "channel": {
+                            "source": channel_type,
+                            "binding_id": binding.id,
+                            "conversation_id": im_conversation_id,
+                            "conversation_type": im_conversation_type,
+                            "session_scope": "conversation",
+                            "context_projection": "direct_bot",
+                            "engine_session_key": engine_session_key,
+                            "engine_bot_id": bot_id,
+                        }
+                    })),
+                    participants: vec![Participant::bot(
+                        bot_id,
+                        ParticipantRole::Driver,
+                    )],
+                    ..Default::default()
+                },
+            )
+            .await?;
+        self.conversations
+            .upsert(ConversationSessionMap {
+                binding_id: binding.id.clone(),
+                im_conversation_id: im_conversation_id.clone(),
+                im_conversation_type,
+                session_scope: SessionScope::Conversation,
+                im_user_id: None,
+                bcs_session_id: session.id.clone(),
+                last_active_at: (self.now_ms)(),
+            })
+            .await?;
+        info!(
+            binding_id = %binding.id,
+            bcs_session_id = %session.id,
+            im_conversation_id = %im_conversation_id,
+            "channel conversation provisioned"
+        );
+        Ok(ProvisionChannelConversationResult {
+            binding_id: binding.id,
+            bcs_session_id: session.id,
+            engine_session_key,
+            created: true,
+        })
+    }
+
     async fn create_binding(
         &self,
         cmd: CreateBindingCommand,

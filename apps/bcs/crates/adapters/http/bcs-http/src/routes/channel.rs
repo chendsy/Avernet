@@ -10,7 +10,9 @@ use bcs_domain::{
     BindingTarget, ChannelBinding, ChannelConfig, ChannelType, ConversationSessionMap,
     GroupChatScope, SessionScope, Visibility,
 };
-use bcs_service_api::{ChannelUseCaseError, CreateBindingCommand, ServiceError};
+use bcs_service_api::{
+    ChannelUseCaseError, CreateBindingCommand, ProvisionChannelConversationCommand, ServiceError,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -114,6 +116,23 @@ pub struct ListConversationsBySessionQuery {
     pub channel_type: Option<ChannelType>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ProvisionConversationRequest {
+    pub channel_type: ChannelType,
+    pub account_ref: String,
+    pub im_conversation_id: String,
+    pub im_conversation_type: String,
+    pub engine_session_key: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ProvisionConversationResponse {
+    pub binding_id: String,
+    pub bcs_session_id: String,
+    pub engine_session_key: String,
+    pub created: bool,
+}
+
 pub async fn provider_http_ingress(
     State(state): State<HttpAppState>,
     method: Method,
@@ -211,6 +230,32 @@ pub async fn list_bindings_by_target(
         .map_err(channel_error)?;
     let items = items.into_iter().map(BindingResponse::from).collect();
     Ok(Json(BindingListResponse { items }))
+}
+
+pub async fn provision_conversation(
+    State(state): State<HttpAppState>,
+    headers: HeaderMap,
+    Json(req): Json<ProvisionConversationRequest>,
+) -> Result<Json<ProvisionConversationResponse>, HttpAdapterError> {
+    require_service_credential(&state, &headers)?;
+    let result = state
+        .services
+        .channel
+        .provision_conversation(ProvisionChannelConversationCommand {
+            channel_type: req.channel_type,
+            account_ref: req.account_ref,
+            im_conversation_id: req.im_conversation_id,
+            im_conversation_type: req.im_conversation_type,
+            engine_session_key: req.engine_session_key,
+        })
+        .await
+        .map_err(channel_error)?;
+    Ok(Json(ProvisionConversationResponse {
+        binding_id: result.binding_id,
+        bcs_session_id: result.bcs_session_id,
+        engine_session_key: result.engine_session_key,
+        created: result.created,
+    }))
 }
 
 pub async fn list_conversations_by_session(
@@ -381,6 +426,28 @@ fn channel_http_response(
     builder
         .body(Body::from(response.body))
         .map_err(|error| HttpAdapterError::Service(ServiceError::InternalError(error.to_string())))
+}
+
+fn require_service_credential(
+    state: &HttpAppState,
+    headers: &HeaderMap,
+) -> Result<(), HttpAdapterError> {
+    let raw_key = headers
+        .get("X-BCS-Service-Key")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            HttpAdapterError::Unauthorized(
+                "missing service credential (X-BCS-Service-Key)".to_string(),
+            )
+        })?;
+    if state.service_api_keys.is_empty() || state.service_api_keys.resolve(raw_key).is_some() {
+        return Ok(());
+    }
+    Err(HttpAdapterError::Unauthorized(
+        "invalid service credential".to_string(),
+    ))
 }
 
 async fn require_staff_no(

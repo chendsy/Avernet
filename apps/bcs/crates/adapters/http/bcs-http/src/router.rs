@@ -126,6 +126,10 @@ fn build_api_routes() -> Router<HttpAppState> {
             get(routes::channel::list_conversations_by_session),
         )
         .route(
+            "/channels/conversations/provision",
+            post(routes::channel::provision_conversation),
+        )
+        .route(
             "/channels/bindings/{id}",
             patch(routes::channel::set_binding_status).delete(routes::channel::delete_binding),
         )

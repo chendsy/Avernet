@@ -17,8 +17,17 @@ pub(super) async fn frame_for_target(
         flow.registry.get_protocol_version(&target.bot_uuid).await,
         delivery_target,
     );
-    let context_projection =
-        context_projection_for_delivery(flow, group, cmd.session_id.as_deref()).await;
+    let delivery_session = load_delivery_session(flow, cmd.session_id.as_deref()).await;
+    let context_projection = delivery_session
+        .as_ref()
+        .and_then(|session| context_projection_from_meta(session.meta.as_ref()))
+        .unwrap_or_else(|| {
+            if is_human_bot_dm(group) {
+                ContextProjection::DirectBot
+            } else {
+                ContextProjection::Group
+            }
+        });
     let wire_attachments = cmd.attachments.as_ref().and_then(|attachments| {
         let attachments = attachments
             .iter()
@@ -133,7 +142,59 @@ pub(super) async fn frame_for_target(
             },
         );
     }
+    if let Some(session) = delivery_session.as_ref() {
+        stamp_engine_session_key(&mut frame, session.meta.as_ref(), &target.bot_uuid);
+    }
     frame
+}
+
+async fn load_delivery_session(
+    flow: &BcsMessageFlow,
+    session_id: Option<&str>,
+) -> Option<bcs_domain::Session> {
+    let session_id = session_id?;
+    let sessions = flow.session_management.as_ref()?;
+    match sessions.get(session_id).await {
+        Ok(session) => session,
+        Err(error) => {
+            warn!(%session_id, %error, "failed to load session delivery metadata");
+            None
+        }
+    }
+}
+
+pub(crate) fn stamp_engine_session_key(
+    frame: &mut BcsFrame,
+    meta: Option<&Value>,
+    target_bot_id: &str,
+) {
+    let Some(channel) = meta.and_then(|meta| meta.get("channel")) else {
+        return;
+    };
+    let Some(engine_bot_id) = channel
+        .get("engine_bot_id")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+    let Some(engine_session_key) = channel
+        .get("engine_session_key")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+    if engine_bot_id != target_bot_id {
+        return;
+    }
+    if let BcsFrame::Request(request) = frame {
+        if let Some(params) = request.params.as_mut() {
+            params["engine_session_key"] = Value::String(engine_session_key.to_string());
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -620,4 +681,43 @@ pub fn build_chat_abort_frame(session_key: &str, run_id: Option<&str>) -> BcsFra
         "chat.abort",
         Some(params),
     ))
+}
+
+#[cfg(test)]
+mod engine_session_tests {
+    use super::*;
+
+    #[test]
+    fn stamps_engine_session_only_for_configured_bot() {
+        let meta = serde_json::json!({
+            "channel": {
+                "engine_bot_id": "bot-1",
+                "engine_session_key": "user:1:session:a:agent:bot-1"
+            }
+        });
+        let mut target_frame = BcsFrame::Request(RequestFrame::new(
+            "request-1".to_string(),
+            "chat.send",
+            Some(serde_json::json!({"bcs_session_id":"bcs-session"})),
+        ));
+        stamp_engine_session_key(&mut target_frame, Some(&meta), "bot-1");
+        let BcsFrame::Request(request) = target_frame else {
+            panic!("expected request frame");
+        };
+        assert_eq!(
+            request.params.as_ref().unwrap()["engine_session_key"],
+            "user:1:session:a:agent:bot-1"
+        );
+
+        let mut other_frame = BcsFrame::Request(RequestFrame::new(
+            "request-2".to_string(),
+            "chat.send",
+            Some(serde_json::json!({"bcs_session_id":"bcs-session"})),
+        ));
+        stamp_engine_session_key(&mut other_frame, Some(&meta), "bot-2");
+        let BcsFrame::Request(request) = other_frame else {
+            panic!("expected request frame");
+        };
+        assert!(request.params.as_ref().unwrap().get("engine_session_key").is_none());
+    }
 }

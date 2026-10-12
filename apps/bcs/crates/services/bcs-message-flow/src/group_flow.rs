@@ -640,5 +640,8 @@ pub(crate) use routing::{apply_overlay_to_decision};
 use routing::{resolve_group_chat_sender, verify_group_chat_caller_access, verify_group_chat_sender, verify_http_group_message_sender, is_human_bot_dm, verify_http_group_message_caller_access, sender_name_for_chat, build_route_overlay, build_explicit_mention_decision, callback_routable_message, mentions_all, delivery_result_summary, sender_display_name, preferred_sender_display_name, from_bot_owner};
 mod delivery;
 pub use delivery::{build_chat_abort_frame};
-pub(crate) use delivery::{ContextProjection, context_projection_for_delivery, frame_protocol_version, frontend_domain_for_group};
+pub(crate) use delivery::{
+    ContextProjection, context_projection_for_delivery, frame_protocol_version,
+    frontend_domain_for_group, stamp_engine_session_key,
+};
 use delivery::{frame_for_target, bot_delivery_kind, delivery_metric_kind, publish_web_user_message, publish_group_callback_event, publish_chat_abort_event, route_source_for_web_send, log_message_received, log_routing_digest, log_bot_deliver_result};

@@ -29,6 +29,7 @@ use bcs_domain::{
 use bcs_service_api::application::channel::{
     ChannelInboundError, ChannelInboundFailureKind, ChannelService, ChannelUseCaseError,
     CreateBindingCommand, InboundMessage, OutboundMessage,
+    ProvisionChannelConversationCommand, ProvisionChannelConversationResult,
 };
 use bcs_service_api::application::collaboration_runtime::{
     AuthenticatedHumanCaller, StartStateMachineRunCommand,
@@ -321,7 +322,7 @@ impl BcsChannelService {
         msg: &InboundMessage,
     ) -> Result<(String, bool), ChannelUseCaseError> {
         if ctx.new_session_per_message {
-            return Ok((self.create_chat_session(ctx, msg).await?, false));
+            return Ok((self.create_chat_session(ctx, msg, None).await?, false));
         }
         let current = self
             .conversations
@@ -332,20 +333,17 @@ impl BcsChannelService {
                 ctx.im_user_id.as_deref(),
             )
             .await?;
+        let mut engine_route = None;
         if let Some(map) = current {
-            if self
-                .sessions
-                .get(&map.bcs_session_id)
-                .await
-                .is_some_and(|session| {
-                    session.status == SessionStatus::Running && session.group_id == ctx.group_id
-                })
-            {
-                return Ok((map.bcs_session_id, true));
+            if let Some(session) = self.sessions.get(&map.bcs_session_id).await {
+                if session.status == SessionStatus::Running && session.group_id == ctx.group_id {
+                    return Ok((map.bcs_session_id, true));
+                }
+                engine_route = engine_route_from_meta(session.meta.as_ref());
             }
         }
 
-        let session_id = self.create_chat_session(ctx, msg).await?;
+        let session_id = self.create_chat_session(ctx, msg, engine_route).await?;
         Ok((session_id, false))
     }
 
@@ -353,6 +351,7 @@ impl BcsChannelService {
         &self,
         ctx: &ResolvedInboundContext,
         msg: &InboundMessage,
+        engine_route: Option<(String, String)>,
     ) -> Result<String, ChannelUseCaseError> {
         let group = self
             .groups
@@ -364,6 +363,19 @@ impl BcsChannelService {
             .into_iter()
             .filter(|participant| participant.is_bot())
             .collect();
+        let mut meta = channel_meta(ctx, msg);
+        if let Some((engine_bot_id, engine_session_key)) = engine_route {
+            if let Some(channel) = meta.get_mut("channel").and_then(serde_json::Value::as_object_mut) {
+                channel.insert(
+                    "engine_bot_id".to_string(),
+                    serde_json::Value::String(engine_bot_id),
+                );
+                channel.insert(
+                    "engine_session_key".to_string(),
+                    serde_json::Value::String(engine_session_key),
+                );
+            }
+        }
         let session = self
             .sessions
             .create_channel(
@@ -377,7 +389,7 @@ impl BcsChannelService {
                     } else {
                         None
                     },
-                    meta: Some(channel_meta(ctx, msg)),
+                    meta: Some(meta),
                     participants,
                     ..Default::default()
                 },
@@ -601,6 +613,30 @@ fn channel_meta(ctx: &ResolvedInboundContext, msg: &InboundMessage) -> serde_jso
             "context_projection": ctx.context_projection,
         }
     })
+}
+
+fn engine_route_from_meta(meta: Option<&serde_json::Value>) -> Option<(String, String)> {
+    let channel = meta?.get("channel")?;
+    let bot_id = channel
+        .get("engine_bot_id")?
+        .as_str()?
+        .trim();
+    let session_key = channel
+        .get("engine_session_key")?
+        .as_str()?
+        .trim();
+    if bot_id.is_empty() || session_key.is_empty() {
+        return None;
+    }
+    Some((bot_id.to_string(), session_key.to_string()))
+}
+
+fn engine_session_key_from_meta(meta: Option<&serde_json::Value>) -> Option<&str> {
+    meta.and_then(|meta| meta.get("channel"))
+        .and_then(|channel| channel.get("engine_session_key"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
 }
 
 fn session_scope_label(scope: SessionScope) -> &'static str {

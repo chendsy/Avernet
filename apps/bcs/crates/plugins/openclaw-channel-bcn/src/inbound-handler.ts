@@ -1300,6 +1300,13 @@ export function resolveChatRunId(requestId: unknown, idempotencyKey: unknown): s
  * Protocol v3 supplies both fields with the same canonical session id. Older
  * frames keep their existing group-based histories.
  */
+export function resolveEngineSessionKey(
+  params: Partial<Pick<ChatSendParams, 'engine_session_key'>>,
+  resolvedSessionKey: string,
+): string {
+  return nonEmptyString(params.engine_session_key) ?? resolvedSessionKey;
+}
+
 export function resolveEngineSessionPeerId(
   params: Pick<ChatSendParams, 'session_key' | 'bcs_group_id'>
   & Partial<Pick<ChatSendParams, 'bcs_session_id'>>,
@@ -1404,8 +1411,9 @@ export async function handleChatSend(
     preparedAttachments = [ ...preparedImages, ...preparedFiles ];
     if (preparedContext) preparedContext.preparedAttachments = preparedAttachments;
 
-    // Resolve agent route to find the correct agent for this session
-    const route = rt.channel.routing.resolveAgentRoute({
+    // Resolve the agent normally, but preserve an explicitly provisioned
+    // TeamClaw session key for engine persistence and UI history.
+    const resolvedRoute = rt.channel.routing.resolveAgentRoute({
       cfg: currentCfg,
       channel: CHANNEL_ID,
       accountId: account.accountId,
@@ -1414,8 +1422,12 @@ export async function handleChatSend(
         id: resolveEngineSessionPeerId(params, `onboarding-${account.botId}`),
       },
     });
+    const route = {
+      ...resolvedRoute,
+      sessionKey: resolveEngineSessionKey(params, resolvedRoute.sessionKey),
+    };
 
-    log?.info?.(`[DEBUG] Resolved agent route: agentId=${route.agentId}, sessionKey=${route.sessionKey}`);
+    log?.info?.(`[DEBUG] Resolved agent route: agentId=${route.agentId}, explicitEngineSession=${Boolean(nonEmptyString(params.engine_session_key))}`);
     const runContext = runContexts.get(runId);
     if (runContext) {
       runContext.sessionKey = route.sessionKey;
@@ -1822,7 +1834,7 @@ export async function handleChatInject(
     const rt = getBcsRuntime();
     const currentCfg = await rt.config.loadConfig();
 
-    const route = rt.channel.routing.resolveAgentRoute({
+    const resolvedRoute = rt.channel.routing.resolveAgentRoute({
       cfg: currentCfg,
       channel: CHANNEL_ID,
       accountId: account.accountId,
@@ -1831,6 +1843,10 @@ export async function handleChatInject(
         id: resolveEngineSessionPeerId(params, `onboarding-${account.botId}`),
       },
     });
+    const route = {
+      ...resolvedRoute,
+      sessionKey: resolveEngineSessionKey(params, resolvedRoute.sessionKey),
+    };
 
     // Record bidirectional mapping: sessionKey <-> bcsGroupId
     if (bcsGroupId) {
