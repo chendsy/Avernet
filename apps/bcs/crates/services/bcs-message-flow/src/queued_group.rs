@@ -559,6 +559,37 @@ pub fn queued_inbound_content(command: &WebSendCommand) -> serde_json::Value {
     content
 }
 
+fn stamp_channel_conversation_id(
+    frame: &mut bcs_protocol::BcsFrame,
+    meta: Option<&serde_json::Value>,
+) {
+    let Some(conversation_id) = meta
+        .and_then(|meta| meta.get("channel"))
+        .and_then(|channel| channel.get("conversation_id"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+    let bcs_protocol::BcsFrame::Request(request) = frame else {
+        return;
+    };
+    let Some(channel) = request
+        .params
+        .as_mut()
+        .and_then(serde_json::Value::as_object_mut)
+        .and_then(|params| params.get_mut("channel"))
+        .and_then(serde_json::Value::as_object_mut)
+    else {
+        return;
+    };
+    channel.insert(
+        "conversation_id".to_string(),
+        serde_json::Value::String(conversation_id.to_string()),
+    );
+}
+
 /// Production protocol preparation used by the managed runtime. In particular,
 /// Inject attachments retain their restrictions when included in chat.send.
 pub async fn prepare_queued_group(
@@ -819,6 +850,7 @@ async fn prepare_queued_group_bounded(
             },
         );
     }
+    stamp_channel_conversation_id(&mut frame, session.meta.as_ref());
     let owner = match &delivery_target {
         BotDeliveryTarget::WebSocket { .. } => BotRunTransportOwner::WebSocket,
         BotDeliveryTarget::HttpProvider {
@@ -855,4 +887,31 @@ async fn prepare_queued_group_bounded(
         },
         transport_context_json: transport_json,
     })
+}
+
+#[cfg(test)]
+mod channel_conversation_tests {
+    use super::*;
+
+    #[test]
+    fn queued_frame_stamps_channel_conversation_id() {
+        let meta = serde_json::json!({
+            "channel": { "conversation_id": "cid-queued" }
+        });
+        let mut frame = bcs_protocol::BcsFrame::Request(bcs_protocol::RequestFrame::new(
+            "request-1".to_string(),
+            "chat.send",
+            Some(serde_json::json!({"channel": {"source": "api"}})),
+        ));
+
+        stamp_channel_conversation_id(&mut frame, Some(&meta));
+
+        let bcs_protocol::BcsFrame::Request(request) = frame else {
+            panic!("expected request frame");
+        };
+        assert_eq!(
+            request.params.as_ref().expect("params")["channel"]["conversation_id"],
+            "cid-queued"
+        );
+    }
 }
