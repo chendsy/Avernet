@@ -137,7 +137,7 @@ pub(super) async fn frame_for_target(
         );
     }
     if let Some(session) = delivery_session.as_ref() {
-        stamp_channel_conversation_id(&mut frame, session.meta.as_ref());
+        stamp_teamclaw_runtime_binding(&mut frame, session.meta.as_ref());
     }
     frame
 }

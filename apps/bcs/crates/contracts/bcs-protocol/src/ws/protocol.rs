@@ -414,13 +414,6 @@ pub enum ChannelSource {
 }
 
 /// BCS extension: identifies the originating channel and end-user.
-///
-/// Wire-level optional key not modeled on this struct: `conversation_id`
-/// carries the originating channel conversation id (e.g. a DingTalk
-/// `openConversationId`). It is stamped onto `params.channel` at delivery time
-/// by [`stamp_channel_conversation_id`] from the BCS Session's
-/// `meta.channel.conversation_id`, and is absent whenever the session has no
-/// such stored id.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelInfo {
     pub source: ChannelSource,
@@ -454,27 +447,31 @@ pub fn apply_channel_info(frame: &mut BcsFrame, channel: ChannelInfo) {
     params.insert("channel".to_string(), channel);
 }
 
-/// Stamp the session's stored channel conversation id onto a delivery frame,
-/// projecting `meta.channel.conversation_id` into `params.channel`.
+/// Project a DingTalk session's runtime-binding context into
+/// `params.extensions.teamclawRuntimeBinding`.
 ///
-/// DingTalk deliveries also receive a versioned runtime-binding hint under
-/// `params.extensions.teamclawRuntimeBinding`. Existing extension keys are
-/// preserved. Sender identity is included only when the resolved binding
-/// explicitly enabled identity forwarding.
+/// The original conversation id remains in BCS Session metadata and is exposed
+/// only through the versioned runtime-binding extension. Existing extension
+/// keys are preserved. Sender identity is included only when the resolved
+/// Channel binding explicitly enabled identity forwarding.
 ///
-/// This must be the **last** writer to `params.channel`:
-/// [`apply_channel_info`] replaces the whole `channel` object and would
-/// silently drop `conversation_id` if called after stamping.
-///
-/// No-op when the meta carries no non-blank conversation id, when the frame is
-/// not a request, or when the frame has no `params.channel` object.
-pub fn stamp_channel_conversation_id(frame: &mut BcsFrame, meta: Option<&Value>) {
+/// No-op for non-DingTalk sessions, missing or blank conversation ids,
+/// non-request frames, or frames without an object-valued `params` field.
+pub fn stamp_teamclaw_runtime_binding(frame: &mut BcsFrame, meta: Option<&Value>) {
     let Some(meta_channel) = meta
         .and_then(|meta| meta.get("channel"))
         .and_then(Value::as_object)
     else {
         return;
     };
+    if meta_channel
+        .get("source")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        != Some("dingtalk")
+    {
+        return;
+    }
     let Some(conversation_id) = meta_channel
         .get("conversation_id")
         .and_then(Value::as_str)
@@ -483,10 +480,6 @@ pub fn stamp_channel_conversation_id(frame: &mut BcsFrame, meta: Option<&Value>)
     else {
         return;
     };
-    let source = meta_channel
-        .get("source")
-        .and_then(Value::as_str)
-        .map(str::trim);
     let binding_id = meta_channel
         .get("binding_id")
         .and_then(Value::as_str)
@@ -498,49 +491,42 @@ pub fn stamp_channel_conversation_id(frame: &mut BcsFrame, meta: Option<&Value>)
     let Some(params) = request.params.as_mut().and_then(Value::as_object_mut) else {
         return;
     };
-    let Some(channel) = params.get_mut("channel").and_then(Value::as_object_mut) else {
-        return;
-    };
-    channel.insert(
-        "conversation_id".to_string(),
-        Value::String(conversation_id.to_string()),
-    );
-    if source != Some("dingtalk") {
-        return;
-    }
 
-    let initiator = if channel
-        .get("identity_forwarding")
-        .and_then(Value::as_bool)
-        == Some(true)
-    {
-        channel
-            .get("user_id")
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .map(|staff_id| {
-                let mut value = serde_json::Map::from_iter([(
-                    "staffId".to_string(),
-                    Value::String(staff_id.to_string()),
-                )]);
-                for (wire_key, source_key) in
-                    [("actorId", "actor_id"), ("name", "actor_name")]
-                {
-                    if let Some(field) = channel
-                        .get(source_key)
-                        .and_then(Value::as_str)
-                        .map(str::trim)
-                        .filter(|field| !field.is_empty())
+    let initiator = params
+        .get("channel")
+        .and_then(Value::as_object)
+        .filter(|channel| {
+            channel
+                .get("identity_forwarding")
+                .and_then(Value::as_bool)
+                == Some(true)
+        })
+        .and_then(|channel| {
+            channel
+                .get("user_id")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(|staff_id| {
+                    let mut value = serde_json::Map::from_iter([(
+                        "staffId".to_string(),
+                        Value::String(staff_id.to_string()),
+                    )]);
+                    for (wire_key, source_key) in
+                        [("actorId", "actor_id"), ("name", "actor_name")]
                     {
-                        value.insert(wire_key.to_string(), Value::String(field.to_string()));
+                        if let Some(field) = channel
+                            .get(source_key)
+                            .and_then(Value::as_str)
+                            .map(str::trim)
+                            .filter(|field| !field.is_empty())
+                        {
+                            value.insert(wire_key.to_string(), Value::String(field.to_string()));
+                        }
                     }
-                }
-                Value::Object(value)
-            })
-    } else {
-        None
-    };
+                    Value::Object(value)
+                })
+        });
 
     let extensions = params
         .entry("extensions".to_string())
@@ -2548,7 +2534,7 @@ mod tests {
     }
 
     #[test]
-    fn stamps_dingtalk_runtime_binding_without_replacing_existing_context() {
+    fn stamps_dingtalk_runtime_binding_without_mutating_channel_context() {
         let meta = serde_json::json!({
             "channel": {
                 "source": "dingtalk",
@@ -2571,14 +2557,14 @@ mod tests {
             })),
         ));
 
-        stamp_channel_conversation_id(&mut frame, Some(&meta));
+        stamp_teamclaw_runtime_binding(&mut frame, Some(&meta));
 
         let BcsFrame::Request(request) = frame else {
             panic!("expected request frame");
         };
         let params = request.params.as_ref().expect("params");
         let channel = &params["channel"];
-        assert_eq!(channel["conversation_id"], "cid-1");
+        assert!(channel.get("conversation_id").is_none());
         assert_eq!(channel["user_id"], " 136677 ");
         assert_eq!(channel["identity_forwarding"], true);
         assert_eq!(params["extensions"]["caller_wait_mode"], "detached");
@@ -2611,7 +2597,7 @@ mod tests {
             })),
         ));
 
-        stamp_channel_conversation_id(&mut frame, Some(&meta));
+        stamp_teamclaw_runtime_binding(&mut frame, Some(&meta));
 
         let BcsFrame::Request(request) = frame else {
             panic!("expected request frame");
@@ -2623,79 +2609,61 @@ mod tests {
     }
 
     #[test]
-    fn non_dingtalk_conversation_does_not_create_runtime_binding() {
+    fn runtime_binding_does_not_require_channel_identity() {
         let meta = serde_json::json!({
-            "channel": {"source": "webui", "conversation_id": "thread-1"}
+            "channel": {"source": "dingtalk", "conversation_id": "cid-1"}
         });
         let mut frame = BcsFrame::Request(RequestFrame::new(
             "request-1".to_string(),
             "chat.send",
-            Some(serde_json::json!({"channel": {"source": "webui"}})),
+            Some(serde_json::json!({"deliver": true})),
         ));
 
-        stamp_channel_conversation_id(&mut frame, Some(&meta));
+        stamp_teamclaw_runtime_binding(&mut frame, Some(&meta));
 
         let BcsFrame::Request(request) = frame else {
             panic!("expected request frame");
         };
-        let params = request.params.as_ref().expect("params");
-        assert_eq!(params["channel"]["conversation_id"], "thread-1");
-        assert!(params.get("extensions").is_none());
+        assert_eq!(
+            request.params.as_ref().expect("params")["extensions"]
+                ["teamclawRuntimeBinding"],
+            serde_json::json!({
+                "version": 1,
+                "source": "dingtalk",
+                "openConversationId": "cid-1"
+            })
+        );
     }
 
     #[test]
-    fn stamps_channel_conversation_id_noops_without_usable_id() {
+    fn runtime_binding_noops_for_unusable_session_metadata() {
         let mut frame = BcsFrame::Request(RequestFrame::new(
             "request-1".to_string(),
             "chat.send",
             Some(serde_json::json!({"channel": {"source": "api"}})),
         ));
-
         let metas = [
             serde_json::json!({}),
-            serde_json::json!({"channel": {}}),
-            serde_json::json!({"channel": {"conversation_id": "   "}}),
+            serde_json::json!({"channel": {"source": "dingtalk"}}),
+            serde_json::json!({"channel": {"source": "dingtalk", "conversation_id": "   "}}),
+            serde_json::json!({"channel": {"source": "webui", "conversation_id": "thread-1"}}),
         ];
+
         for meta in &metas {
-            stamp_channel_conversation_id(&mut frame, Some(meta));
+            stamp_teamclaw_runtime_binding(&mut frame, Some(meta));
         }
-        stamp_channel_conversation_id(&mut frame, None);
+        stamp_teamclaw_runtime_binding(&mut frame, None);
 
         let BcsFrame::Request(request) = frame else {
             panic!("expected request frame");
         };
         assert!(
-            request.params.as_ref().expect("params")["channel"]
-                .get("conversation_id")
+            request
+                .params
+                .as_ref()
+                .expect("params")
+                .get("extensions")
                 .is_none()
         );
-    }
-
-    #[test]
-    fn stamps_channel_conversation_id_noops_without_channel_object() {
-        let meta = serde_json::json!({"channel": {"conversation_id": "cid-1"}});
-        let frames = [
-            BcsFrame::Request(RequestFrame::new("request-1".to_string(), "chat.send", None)),
-            BcsFrame::Request(RequestFrame::new(
-                "request-2".to_string(),
-                "chat.send",
-                Some(serde_json::json!({"deliver": true})),
-            )),
-        ];
-
-        for mut frame in frames {
-            stamp_channel_conversation_id(&mut frame, Some(&meta));
-            let BcsFrame::Request(request) = frame else {
-                panic!("expected request frame");
-            };
-            assert_ne!(
-                request
-                    .params
-                    .as_ref()
-                    .and_then(|params| params.get("channel"))
-                    .and_then(|channel| channel.get("conversation_id")),
-                Some(&Value::String("cid-1".to_string()))
-            );
-        }
     }
 }
