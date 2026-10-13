@@ -414,6 +414,13 @@ pub enum ChannelSource {
 }
 
 /// BCS extension: identifies the originating channel and end-user.
+///
+/// Wire-level optional key not modeled on this struct: `conversation_id`
+/// carries the originating channel conversation id (e.g. a DingTalk
+/// `openConversationId`). It is stamped onto `params.channel` at delivery time
+/// by [`stamp_channel_conversation_id`] from the BCS Session's
+/// `meta.channel.conversation_id`, and is absent whenever the session has no
+/// such stored id.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelInfo {
     pub source: ChannelSource,
@@ -445,6 +452,43 @@ pub fn apply_channel_info(frame: &mut BcsFrame, channel: ChannelInfo) {
         Value::Null
     });
     params.insert("channel".to_string(), channel);
+}
+
+/// Stamp the session's stored channel conversation id onto a delivery frame,
+/// projecting `meta.channel.conversation_id` into `params.channel`.
+///
+/// This must be the **last** writer to `params.channel`:
+/// [`apply_channel_info`] replaces the whole `channel` object and would
+/// silently drop `conversation_id` if called after stamping.
+///
+/// No-op when the meta carries no non-blank conversation id, when the frame is
+/// not a request, or when the frame has no `params.channel` object.
+pub fn stamp_channel_conversation_id(frame: &mut BcsFrame, meta: Option<&Value>) {
+    let Some(conversation_id) = meta
+        .and_then(|meta| meta.get("channel"))
+        .and_then(|channel| channel.get("conversation_id"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    else {
+        return;
+    };
+    let BcsFrame::Request(request) = frame else {
+        return;
+    };
+    let Some(channel) = request
+        .params
+        .as_mut()
+        .and_then(Value::as_object_mut)
+        .and_then(|params| params.get_mut("channel"))
+        .and_then(Value::as_object_mut)
+    else {
+        return;
+    };
+    channel.insert(
+        "conversation_id".to_string(),
+        Value::String(conversation_id.to_string()),
+    );
 }
 
 /// Group context injected by BCS when routing messages to bots.
@@ -2420,6 +2464,90 @@ mod tests {
                 assert_eq!(p.tags, tags);
             }
             _ => panic!("expected Request frame"),
+        }
+    }
+
+    #[test]
+    fn stamps_channel_conversation_id_without_replacing_sender_identity() {
+        let meta = serde_json::json!({
+            "channel": { "conversation_id": " cid-1 " }
+        });
+        let mut frame = BcsFrame::Request(RequestFrame::new(
+            "request-1".to_string(),
+            "chat.send",
+            Some(serde_json::json!({
+                "channel": {
+                    "source": "dingtalk",
+                    "user_id": "136677",
+                    "identity_forwarding": true
+                }
+            })),
+        ));
+
+        stamp_channel_conversation_id(&mut frame, Some(&meta));
+
+        let BcsFrame::Request(request) = frame else {
+            panic!("expected request frame");
+        };
+        let channel = &request.params.as_ref().expect("params")["channel"];
+        assert_eq!(channel["conversation_id"], "cid-1");
+        assert_eq!(channel["user_id"], "136677");
+        assert_eq!(channel["identity_forwarding"], true);
+    }
+
+    #[test]
+    fn stamps_channel_conversation_id_noops_without_usable_id() {
+        let mut frame = BcsFrame::Request(RequestFrame::new(
+            "request-1".to_string(),
+            "chat.send",
+            Some(serde_json::json!({"channel": {"source": "api"}})),
+        ));
+
+        let metas = [
+            serde_json::json!({}),
+            serde_json::json!({"channel": {}}),
+            serde_json::json!({"channel": {"conversation_id": "   "}}),
+        ];
+        for meta in &metas {
+            stamp_channel_conversation_id(&mut frame, Some(meta));
+        }
+        stamp_channel_conversation_id(&mut frame, None);
+
+        let BcsFrame::Request(request) = frame else {
+            panic!("expected request frame");
+        };
+        assert!(
+            request.params.as_ref().expect("params")["channel"]
+                .get("conversation_id")
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn stamps_channel_conversation_id_noops_without_channel_object() {
+        let meta = serde_json::json!({"channel": {"conversation_id": "cid-1"}});
+        let frames = [
+            BcsFrame::Request(RequestFrame::new("request-1".to_string(), "chat.send", None)),
+            BcsFrame::Request(RequestFrame::new(
+                "request-2".to_string(),
+                "chat.send",
+                Some(serde_json::json!({"deliver": true})),
+            )),
+        ];
+
+        for mut frame in frames {
+            stamp_channel_conversation_id(&mut frame, Some(&meta));
+            let BcsFrame::Request(request) = frame else {
+                panic!("expected request frame");
+            };
+            assert_ne!(
+                request
+                    .params
+                    .as_ref()
+                    .and_then(|params| params.get("channel"))
+                    .and_then(|channel| channel.get("conversation_id")),
+                Some(&Value::String("cid-1".to_string()))
+            );
         }
     }
 }

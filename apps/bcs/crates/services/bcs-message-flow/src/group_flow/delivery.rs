@@ -21,13 +21,7 @@ pub(super) async fn frame_for_target(
     let context_projection = delivery_session
         .as_ref()
         .and_then(|session| context_projection_from_meta(session.meta.as_ref()))
-        .unwrap_or_else(|| {
-            if is_human_bot_dm(group) {
-                ContextProjection::DirectBot
-            } else {
-                ContextProjection::Group
-            }
-        });
+        .unwrap_or_else(|| default_context_projection(group));
     let wire_attachments = cmd.attachments.as_ref().and_then(|attachments| {
         let attachments = attachments
             .iter()
@@ -157,38 +151,10 @@ async fn load_delivery_session(
     match sessions.get(session_id).await {
         Ok(session) => session,
         Err(error) => {
-            warn!(%error, "failed to load session delivery metadata");
+            warn!(%session_id, %error, "failed to load session delivery metadata");
             None
         }
     }
-}
-
-fn stamp_channel_conversation_id(frame: &mut BcsFrame, meta: Option<&Value>) {
-    let Some(conversation_id) = meta
-        .and_then(|meta| meta.get("channel"))
-        .and_then(|channel| channel.get("conversation_id"))
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    else {
-        return;
-    };
-    let BcsFrame::Request(request) = frame else {
-        return;
-    };
-    let Some(channel) = request
-        .params
-        .as_mut()
-        .and_then(Value::as_object_mut)
-        .and_then(|params| params.get_mut("channel"))
-        .and_then(Value::as_object_mut)
-    else {
-        return;
-    };
-    channel.insert(
-        "conversation_id".to_string(),
-        Value::String(conversation_id.to_string()),
-    );
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,32 +168,18 @@ pub(crate) async fn context_projection_for_delivery(
     group: &Group,
     session_id: Option<&str>,
 ) -> ContextProjection {
-    if let Some(projection) = context_projection_for_session(flow, session_id).await {
-        return projection;
-    }
-    if is_human_bot_dm(group) {
-        return ContextProjection::DirectBot;
-    }
-    ContextProjection::Group
+    load_delivery_session(flow, session_id)
+        .await
+        .as_ref()
+        .and_then(|session| context_projection_from_meta(session.meta.as_ref()))
+        .unwrap_or_else(|| default_context_projection(group))
 }
 
-async fn context_projection_for_session(
-    flow: &BcsMessageFlow,
-    session_id: Option<&str>,
-) -> Option<ContextProjection> {
-    let Some(session_id) = session_id else {
-        return None;
-    };
-    let Some(session_management) = flow.session_management.as_ref() else {
-        return None;
-    };
-    match session_management.get(session_id).await {
-        Ok(Some(session)) => context_projection_from_meta(session.meta.as_ref()),
-        Ok(None) => None,
-        Err(error) => {
-            warn!(%session_id, %error, "failed to load session for context projection");
-            None
-        }
+fn default_context_projection(group: &Group) -> ContextProjection {
+    if is_human_bot_dm(group) {
+        ContextProjection::DirectBot
+    } else {
+        ContextProjection::Group
     }
 }
 
@@ -675,37 +627,4 @@ pub fn build_chat_abort_frame(session_key: &str, run_id: Option<&str>) -> BcsFra
         "chat.abort",
         Some(params),
     ))
-}
-
-#[cfg(test)]
-mod channel_conversation_tests {
-    use super::*;
-
-    #[test]
-    fn stamps_channel_conversation_id_without_replacing_sender_identity() {
-        let meta = serde_json::json!({
-            "channel": { "conversation_id": " cid-1 " }
-        });
-        let mut frame = BcsFrame::Request(RequestFrame::new(
-            "request-1".to_string(),
-            "chat.send",
-            Some(serde_json::json!({
-                "channel": {
-                    "source": "dingtalk",
-                    "user_id": "136677",
-                    "identity_forwarding": true
-                }
-            })),
-        ));
-
-        stamp_channel_conversation_id(&mut frame, Some(&meta));
-
-        let BcsFrame::Request(request) = frame else {
-            panic!("expected request frame");
-        };
-        let channel = &request.params.as_ref().expect("params")["channel"];
-        assert_eq!(channel["conversation_id"], "cid-1");
-        assert_eq!(channel["user_id"], "136677");
-        assert_eq!(channel["identity_forwarding"], true);
-    }
 }
